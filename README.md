@@ -6,8 +6,8 @@ This project is being built step-by-step from the blueprint in `docs/AI-Intervie
 
 - Frontend: React + TypeScript + Vite
 - Backend: FastAPI + Python
-- Database (next steps): Supabase PostgreSQL
-- Storage (next steps): Supabase Storage
+- Database: Supabase PostgreSQL
+- Storage: Supabase Storage
 - LLM (next steps): OpenAI API (`gpt-4o-mini` by default)
 
 ## Vision
@@ -36,16 +36,27 @@ Implemented now:
 - Supabase client wiring in backend
 - Interview endpoints:
   - `POST /interviews`
+  - `GET /interviews`
   - `GET /interviews/{interview_id}`
+  - `DELETE /interviews/{interview_id}`
 - Supabase schema SQL file: `docs/supabase_schema.sql`
 - Frontend skeleton with route structure and placeholder pages
 - Frontend API client configured via `VITE_API_URL`
 - Admin create-interview form (title, target questions, starting difficulty)
 - Redirect from `/admin` to `/admin/interviews/:id` after successful creation
+- Document upload endpoint with PDF extraction:
+  - `POST /interviews/{interview_id}/documents`
+- Document listing endpoints:
+  - `GET /interviews/{interview_id}/documents` (from DB)
+  - `GET /interviews/{interview_id}/documentsFromStorage` (from Storage)
+- Document delete endpoint:
+  - `DELETE /interviews/{interview_id}/documents/{filename}`
+- Frontend upload UI for resume and role description PDFs with upload status
+- Frontend interview-title dropdown on interview details page
+- Upload errors surfaced with backend-friendly messages
 
 Not implemented yet (planned):
 
-- Document upload + text extraction
 - Match analysis endpoint
 - Interview loop (start, answer, next-question)
 - Scoring + difficulty adaptation
@@ -163,7 +174,13 @@ Based on `frontend/.env.example`:
 
 - `GET /health` -> returns service health
 - `POST /interviews` -> creates interview
+- `GET /interviews` -> lists interviews
 - `GET /interviews/{interview_id}` -> fetches interview
+- `DELETE /interviews/{interview_id}` -> deletes interview
+- `POST /interviews/{interview_id}/documents` -> uploads PDF and returns extracted character count
+- `GET /interviews/{interview_id}/documents` -> lists documents from `documents` table
+- `GET /interviews/{interview_id}/documentsFromStorage` -> lists documents from Supabase Storage
+- `DELETE /interviews/{interview_id}/documents/{filename}` -> deletes document from Storage + DB
 
 ### Frontend
 
@@ -201,8 +218,13 @@ The implementation roadmap is defined in `AGENTS.md` (Steps 1-11).
 
 ## Next Milestones
 
-1. Document upload and extraction
-2. Match analysis with OpenAI
-3. Interview start + answer scoring loop
-4. Final report generation
-5. Dockerize API + frontend for local runs
+1. Match analysis with OpenAI
+2. Interview start + answer scoring loop
+3. Final report generation
+4. Dockerize API + frontend for local runs
+
+## Current document behavior
+
+- Uploaded document filenames are normalized to `snake_case` before storing.
+- Upload stores file in Supabase Storage and upserts metadata/content in `documents` table.
+- Upload enforces duplicate checks and returns `409` on conflicts.

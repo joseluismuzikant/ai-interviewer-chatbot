@@ -8,7 +8,7 @@ This project is being built step-by-step from the blueprint in `docs/AI-Intervie
 - Backend: FastAPI + Python
 - Database: Supabase PostgreSQL
 - Storage: Supabase Storage
-- LLM (next steps): OpenAI API (`gpt-4o-mini` by default)
+- LLM: Pluggable multi-provider (Mock, OpenAI, Gemini, DeepSeek)
 
 ## Vision
 
@@ -51,13 +51,15 @@ Implemented now:
   - `GET /interviews/{interview_id}/documentsFromStorage` (from Storage)
 - Document delete endpoint:
   - `DELETE /interviews/{interview_id}/documents/{filename}`
+- LLM Match analysis endpoint:
+  - `POST /interviews/{interview_id}/analyze`
 - Frontend upload UI for resume and role description PDFs with upload status
 - Frontend interview-title dropdown on interview details page
 - Upload errors surfaced with backend-friendly messages
+- Frontend analysis button rendering structured match JSON output
 
 Not implemented yet (planned):
 
-- Match analysis endpoint
 - Interview loop (start, answer, next-question)
 - Scoring + difficulty adaptation
 - Final report generation
@@ -181,6 +183,7 @@ Based on `frontend/.env.example`:
 - `GET /interviews/{interview_id}/documents` -> lists documents from `documents` table
 - `GET /interviews/{interview_id}/documentsFromStorage` -> lists documents from Supabase Storage
 - `DELETE /interviews/{interview_id}/documents/{filename}` -> deletes document from Storage + DB
+- `POST /interviews/{interview_id}/analyze` -> triggers LLM match analysis and returns structured JSON
 
 ### Frontend
 
@@ -218,13 +221,22 @@ The implementation roadmap is defined in `AGENTS.md` (Steps 1-11).
 
 ## Next Milestones
 
-1. Match analysis with OpenAI
-2. Interview start + answer scoring loop
-3. Final report generation
-4. Dockerize API + frontend for local runs
+1. Interview start + answer scoring loop
+2. Final report generation
+3. Dockerize API + frontend for local runs
 
 ## Current document behavior
 
 - Uploaded document filenames are normalized to `snake_case` before storing.
 - Upload stores file in Supabase Storage and upserts metadata/content in `documents` table.
-- Upload enforces duplicate checks and returns `409` on conflicts.
+- Uploading a document for an existing type replaces the old document in both Storage and DB.
+
+## LLM Provider Configuration
+
+The backend supports multiple LLM providers. Configure them in `api/.env`:
+
+- `LLM_PROVIDER`: `mock` | `openai` | `gemini` | `deepseek`
+- **mock**: Requires no credentials, returns a fixed response for testing.
+- **openai**: Requires `OPENAI_API_KEY`, uses `OPENAI_MODEL` (default: `gpt-4o-mini`).
+- **gemini**: Requires `GOOGLE_API_KEY`, uses `GOOGLE_MODEL` (default: `gemini-2.0-flash`).
+- **deepseek**: Requires `DEEPSEEK_API_KEY`, uses `DEEPSEEK_MODEL` (default: `deepseek-chat`).

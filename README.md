@@ -69,11 +69,50 @@ Not implemented yet (planned):
 
 ```mermaid
 flowchart LR
-  A[Admin UI] -->|REST| B[FastAPI Orchestrator]
-  C[Candidate UI] -->|REST| B
-  B --> D[(Supabase PostgreSQL)]
-  B --> E[(Supabase Storage)]
-  B --> F[OpenAI API]
+  subgraph Client["Client Apps"]
+    A["Admin UI<br/>React + TypeScript + Vite"]
+    C["Candidate UI<br/>React + TypeScript + Vite<br/>(planned interview flow)"]
+  end
+
+  subgraph Backend["Backend API"]
+    B["FastAPI Orchestrator"]
+    I["Interview Service"]
+    DOC["Document Service<br/>PDF upload + PyMuPDF extraction"]
+    AN["Analysis Service<br/>Match analysis"]
+    LLM["LLM Provider Layer"]
+  end
+
+  subgraph Supabase["Supabase"]
+    DB[("PostgreSQL<br/>interviews, documents, messages")]
+    ST[("Storage<br/>uploaded PDFs")]
+  end
+
+  subgraph Providers["LLM Providers"]
+    M["Mock Provider"]
+    O["OpenAI"]
+    G["Gemini"]
+    D["DeepSeek"]
+  end
+
+  A -->|"REST"| B
+  C -->|"REST"| B
+
+  B --> I
+  B --> DOC
+  B --> AN
+
+  DOC -->|"store original PDF"| ST
+  DOC -->|"store metadata + extracted_text"| DB
+
+  I --> DB
+  AN -->|"read resume + role_description extracted_text"| DB
+  AN --> LLM
+  LLM --> M
+  LLM --> O
+  LLM --> G
+  LLM --> D
+
+  AN -->|"persist match_analysis_json<br/>status = READY"| DB
 ```
 
 ## Repository Layout

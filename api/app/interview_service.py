@@ -10,6 +10,10 @@ class InterviewService:
     def __init__(self, supabase: Client) -> None:
         self.supabase = supabase
 
+    def list_interviews(self) -> list[dict]:
+        response = self.supabase.table("interviews").select("*").execute()
+        return response.data or []
+
     def create_interview(self, payload: InterviewCreateRequest) -> dict:
         insert_payload = {
             "title": payload.title,
@@ -37,3 +41,7 @@ class InterviewService:
             raise HTTPException(status_code=404, detail="Interview not found")
 
         return data[0]
+
+    def delete_interview(self, interview_id: UUID) -> None:
+        self.get_interview(interview_id)
+        self.supabase.table("interviews").delete().eq("id", str(interview_id)).execute()

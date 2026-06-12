@@ -19,6 +19,8 @@ class Settings(BaseSettings):
 
     supabase_url: str = ""
     supabase_service_role_key: str = ""
+    supabase_storage_bucket: str = "interview-documents"
+
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
 

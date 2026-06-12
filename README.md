@@ -33,12 +33,18 @@ Implemented now:
 - Health endpoint: `GET /health`
 - Backend CORS for local frontend origins
 - Environment-driven backend configuration via `.env`
+- Supabase client wiring in backend
+- Interview endpoints:
+  - `POST /interviews`
+  - `GET /interviews/{interview_id}`
+- Supabase schema SQL file: `docs/supabase_schema.sql`
 - Frontend skeleton with route structure and placeholder pages
 - Frontend API client configured via `VITE_API_URL`
+- Admin create-interview form (title, target questions, starting difficulty)
+- Redirect from `/admin` to `/admin/interviews/:id` after successful creation
 
 Not implemented yet (planned):
 
-- Supabase schema + persistence
 - Document upload + text extraction
 - Match analysis endpoint
 - Interview loop (start, answer, next-question)
@@ -156,6 +162,8 @@ Based on `frontend/.env.example`:
 ### Backend
 
 - `GET /health` -> returns service health
+- `POST /interviews` -> creates interview
+- `GET /interviews/{interview_id}` -> fetches interview
 
 ### Frontend
 
@@ -193,9 +201,8 @@ The implementation roadmap is defined in `AGENTS.md` (Steps 1-11).
 
 ## Next Milestones
 
-1. Supabase schema + backend interview endpoints
-2. Document upload and extraction
-3. Match analysis with OpenAI
-4. Interview start + answer scoring loop
-5. Final report generation
-6. Dockerize API + frontend for local runs
+1. Document upload and extraction
+2. Match analysis with OpenAI
+3. Interview start + answer scoring loop
+4. Final report generation
+5. Dockerize API + frontend for local runs

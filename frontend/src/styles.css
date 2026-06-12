@@ -69,6 +69,31 @@ section {
   padding: 1.5rem;
 }
 
+.admin-form {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1rem;
+  max-width: 420px;
+}
+
+.admin-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.admin-form input {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+}
+
+.admin-form input:focus {
+  outline: 2px solid #93c5fd;
+  border-color: #2563eb;
+}
+
 button {
   border: none;
   border-radius: 8px;
@@ -81,4 +106,15 @@ button {
 
 button:hover {
   background-color: #1d4ed8;
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.form-error {
+  color: #b91c1c;
+  font-weight: 600;
+  margin-top: 0.85rem;
 }

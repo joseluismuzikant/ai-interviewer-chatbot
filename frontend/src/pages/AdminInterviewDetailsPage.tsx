@@ -6,6 +6,7 @@ export function AdminInterviewDetailsPage() {
   return (
     <section>
       <h2>Interview Details</h2>
+      <p>Interview created successfully.</p>
       <p>Interview ID: {id}</p>
       <p>Placeholder for resume upload, role description upload, and analysis.</p>
     </section>

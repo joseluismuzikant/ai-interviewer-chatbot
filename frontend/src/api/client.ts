@@ -44,6 +44,39 @@ export type UploadDocumentResponse = {
   storage_path: string;
 };
 
+export type DocumentRecord = {
+  id: string;
+  interview_id: string;
+  document_type: DocumentType;
+  filename: string;
+  storage_path: string;
+  mime_type: string | null;
+  extracted_text: string | null;
+  extracted_character_count: number;
+  created_at: string | null;
+};
+
+export type DocumentListResponse = {
+  interview_id: string;
+  documents: DocumentRecord[];
+};
+
+export async function getInterviewDocuments(
+  interviewId: string
+): Promise<DocumentListResponse> {
+  const response = await fetch(
+    `${API_URL}/interviews/${interviewId}/documents`
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, "Fetch documents failed")
+    );
+  }
+
+  return response.json() as Promise<DocumentListResponse>;
+}
+
 export async function getHealth(): Promise<HealthResponse> {
   const response = await fetch(`${API_URL}/health`);
 
@@ -80,6 +113,35 @@ export async function getInterviews(): Promise<InterviewResponse[]> {
   }
 
   return response.json() as Promise<InterviewResponse[]>;
+}
+
+export type AnalysisItem = {
+  topic: string;
+  reason: string;
+};
+
+export type MatchAnalysis = {
+  role_summary: string;
+  candidate_summary: string;
+  focus_areas: AnalysisItem[];
+  potential_gaps: AnalysisItem[];
+};
+
+export async function analyzeInterview(
+  interviewId: string
+): Promise<MatchAnalysis> {
+  const response = await fetch(
+    `${API_URL}/interviews/${interviewId}/analyze`,
+    { method: "POST" }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, "Analysis failed")
+    );
+  }
+
+  return response.json() as Promise<MatchAnalysis>;
 }
 
 export async function uploadInterviewDocument(

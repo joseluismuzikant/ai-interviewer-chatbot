@@ -21,6 +21,9 @@ This directory contains the backend API for the AI Interviewer Chatbot MVP.
 - File upload to Supabase Storage bucket `interview-documents`
 - Upsert document metadata/content into `documents` table
 - Filename normalization to `snake_case` before storing in Storage and DB
+- `POST /interviews/{interview_id}/analyze` (LLM match analysis)
+- Multi-provider LLM factory (`mock`, `openai`, `gemini`, `deepseek`)
+- Clean HTTP 503 error handling for LLM provider failures (e.g. DeepSeek insufficient balance)
 
 ## Run locally
 
@@ -124,7 +127,14 @@ curl -X DELETE \
   "http://localhost:8000/interviews/<interview_id>/documents/<filename.pdf>"
 ```
 
+Run match analysis:
+
+```bash
+curl -X POST http://localhost:8000/interviews/<interview_id>/analyze
+```
+
 Notes:
 
 - Upload endpoint normalizes filename to `snake_case` before saving.
-- Duplicate uploads for the same `interview_id + document_type` return `409`.
+- Upload endpoint replaces previous documents of the same type (effectively an upsert).
+- LLM Provider is controlled by `LLM_PROVIDER` in `.env` (options: `mock`, `openai`, `gemini`, `deepseek`).

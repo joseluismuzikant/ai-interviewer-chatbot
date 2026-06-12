@@ -5,9 +5,11 @@ from uuid import UUID
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.analysis_service import AnalysisService
 from app.config import get_settings
 from app.document_service import DocumentService
 from app.interview_service import InterviewService
+from app.llm import get_llm_client
 from app.schemas import (
     DocumentDeleteResponse,
     DocumentListResponse,
@@ -17,6 +19,7 @@ from app.schemas import (
     HealthResponse,
     InterviewCreateRequest,
     InterviewResponse,
+    MatchAnalysisResponse,
 )
 from app.supabase_client import get_supabase_client
 
@@ -58,6 +61,22 @@ def get_cached_document_service() -> DocumentService:
 
 def get_document_service() -> DocumentService:
     return get_cached_document_service()
+
+
+@lru_cache
+def get_cached_llm_client():
+    return get_llm_client(get_settings())
+
+
+def get_llm_client_instance():
+    return get_cached_llm_client()
+
+
+def get_analysis_service() -> AnalysisService:
+    return AnalysisService(
+        supabase=get_cached_supabase_client(),
+        llm=get_cached_llm_client(),
+    )
 
 
 @app.post("/interviews", response_model=InterviewResponse)
@@ -161,3 +180,17 @@ def delete_document(
         interview_id=interview_id, filename=filename
     )
     return DocumentDeleteResponse(**deleted)
+
+
+@app.post(
+    "/interviews/{interview_id}/analyze",
+    response_model=MatchAnalysisResponse,
+)
+def analyze_interview(
+    interview_id: UUID,
+    interview_service: InterviewService = Depends(get_interview_service),
+    analysis_service: AnalysisService = Depends(get_analysis_service),
+) -> MatchAnalysisResponse:
+    interview_service.get_interview(interview_id)
+    result = analysis_service.analyze_interview(interview_id)
+    return MatchAnalysisResponse(**result)

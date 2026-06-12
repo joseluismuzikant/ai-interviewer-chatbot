@@ -28,6 +28,18 @@ class InterviewResponse(BaseModel):
     updated_at: datetime | None = None
 
 
+class AnalysisItem(BaseModel):
+    topic: str
+    reason: str
+
+
+class MatchAnalysisResponse(BaseModel):
+    role_summary: str
+    candidate_summary: str
+    focus_areas: list[AnalysisItem]
+    potential_gaps: list[AnalysisItem]
+
+
 class DocumentUploadResponse(BaseModel):
     interview_id: UUID
     document_type: Literal["resume", "role_description"]

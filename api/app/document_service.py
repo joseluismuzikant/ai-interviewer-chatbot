@@ -37,10 +37,10 @@ class DocumentService:
         extracted_character_count = len(extracted_text)
         original_filename = self._normalize_original_filename(filename)
         normalized_filename = self._to_snake_case_filename(original_filename)
-        self._validate_not_already_uploaded(
+
+        self._replace_existing_document(
             interview_id=interview_id,
             document_type=document_type,
-            filename=normalized_filename,
         )
 
         storage_path = self._upload_to_supabase_storage(
@@ -243,54 +243,46 @@ class DocumentService:
 
         return storage_path
 
-    def _validate_not_already_uploaded(
+    def _replace_existing_document(
         self,
         interview_id: UUID,
         document_type: DocumentType,
-        filename: str,
     ) -> None:
-        existing_document = (
+        response = (
             self.supabase.table("documents")
-            .select("id,filename")
+            .select("id,storage_path")
             .eq("interview_id", str(interview_id))
             .eq("document_type", document_type)
             .limit(1)
             .execute()
         )
-        existing_data = existing_document.data or []
-        if existing_data:
-            current_name = (
-                existing_data[0].get("filename")
-                if isinstance(existing_data[0], dict)
-                else None
-            )
-            detail = f"A {document_type} document is already uploaded" + (
-                f": {current_name}" if current_name else ""
-            )
-            raise HTTPException(status_code=409, detail=detail)
+        data = response.data or []
+        if not data:
+            return
 
-        folder = f"{interview_id}/{document_type}"
-        try:
-            items = self.supabase.storage.from_(self.bucket_name).list(path=folder)
-        except Exception as exc:
-            raise HTTPException(
-                status_code=500,
-                detail=(
-                    "Could not validate existing files in Supabase Storage. "
-                    "Ensure bucket 'interview-documents' exists."
-                ),
-            ) from exc
+        existing = data[0]
+        existing_id = existing.get("id") if isinstance(existing, dict) else None
+        existing_storage_path = (
+            existing.get("storage_path") if isinstance(existing, dict) else None
+        )
 
-        existing_names = {
-            item.get("name")
-            for item in (items or [])
-            if isinstance(item, dict) and item.get("name")
-        }
-        if filename in existing_names:
-            raise HTTPException(
-                status_code=409,
-                detail=f"File '{filename}' is already uploaded for {document_type}",
-            )
+        if existing_storage_path:
+            try:
+                self.supabase.storage.from_(self.bucket_name).remove(
+                    [existing_storage_path]
+                )
+            except Exception:
+                pass
+
+        if existing_id:
+            try:
+                self.supabase.table("documents").delete().eq(
+                    "id", existing_id
+                ).execute()
+            except Exception:
+                pass
+
+        self._text_store.pop((str(interview_id), document_type), None)
 
     @staticmethod
     def _normalize_original_filename(filename: str) -> str:

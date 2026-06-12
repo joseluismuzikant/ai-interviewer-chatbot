@@ -92,7 +92,14 @@ ai-interviewer-chatbot/
 │       ├── schemas.py
 │       ├── llm.py
 │       ├── interview_service.py
-│       └── document_service.py
+│       ├── document_service.py
+│       ├── analysis_service.py
+│       └── providers/
+│           ├── base.py
+│           ├── mock.py
+│           ├── openai_provider.py
+│           ├── gemini_provider.py
+│           └── deepseek_provider.py
 ├── frontend/
 │   ├── README.md
 │   ├── package.json
@@ -159,8 +166,13 @@ Based on `api/.env.example`:
 
 - `SUPABASE_URL=`
 - `SUPABASE_SERVICE_ROLE_KEY=`
+- `LLM_PROVIDER=mock`
 - `OPENAI_API_KEY=`
 - `OPENAI_MODEL=gpt-4o-mini`
+- `GOOGLE_API_KEY=`
+- `GOOGLE_MODEL=gemini-2.0-flash`
+- `DEEPSEEK_API_KEY=`
+- `DEEPSEEK_MODEL=deepseek-chat`
 
 Note: these are scaffolded now and will be used in upcoming steps.
 

@@ -21,8 +21,16 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = ""
     supabase_storage_bucket: str = "interview-documents"
 
+    llm_provider: str = "mock"
+
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
+
+    google_api_key: str = ""
+    google_model: str = "gemini-2.0-flash"
+
+    deepseek_api_key: str = ""
+    deepseek_model: str = "deepseek-chat"
 
 
 @lru_cache

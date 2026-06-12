@@ -2,9 +2,13 @@ import { FormEvent, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import {
+  DocumentRecord,
   DocumentType,
   InterviewResponse,
+  MatchAnalysis,
   UploadDocumentResponse,
+  analyzeInterview,
+  getInterviewDocuments,
   getInterviews,
   uploadInterviewDocument,
 } from "../api/client";
@@ -31,6 +35,14 @@ export function AdminInterviewDetailsPage() {
     isUploading: false,
     message: null,
   });
+
+  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
+
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<MatchAnalysis | null>(
+    null
+  );
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -74,6 +86,23 @@ export function AdminInterviewDetailsPage() {
     };
   }, [id]);
 
+  async function loadDocuments(interviewId: string) {
+    try {
+      const data = await getInterviewDocuments(interviewId);
+      setDocuments(data.documents);
+    } catch {
+      // silently ignore document load errors
+    }
+  }
+
+  useEffect(() => {
+    if (!selectedInterviewId) {
+      setDocuments([]);
+      return;
+    }
+    void loadDocuments(selectedInterviewId);
+  }, [selectedInterviewId]);
+
   async function submitUpload(
     event: FormEvent<HTMLFormElement>,
     documentType: DocumentType
@@ -107,11 +136,32 @@ export function AdminInterviewDetailsPage() {
         isUploading: false,
         message: `${documentType} uploaded (${result.extracted_character_count} chars extracted).`,
       });
+      void loadDocuments(selectedInterviewId);
     } catch (error) {
       setState({
         isUploading: false,
         message: error instanceof Error ? error.message : "Upload failed",
       });
+    }
+  }
+
+  async function handleAnalyze() {
+    if (!selectedInterviewId) {
+      return;
+    }
+    setIsAnalyzing(true);
+    setAnalysisResult(null);
+    setAnalysisError(null);
+
+    try {
+      const result = await analyzeInterview(selectedInterviewId);
+      setAnalysisResult(result);
+    } catch (error) {
+      setAnalysisError(
+        error instanceof Error ? error.message : "Analysis failed"
+      );
+    } finally {
+      setIsAnalyzing(false);
     }
   }
 
@@ -148,6 +198,16 @@ export function AdminInterviewDetailsPage() {
           onSubmit={(event) => submitUpload(event, "resume")}
         >
           <h3>Upload Resume</h3>
+          {(() => {
+            const doc = documents.find(
+              (d) => d.document_type === "resume"
+            );
+            return doc ? (
+              <p className="doc-info">
+                Current: {doc.filename} ({doc.extracted_character_count} chars)
+              </p>
+            ) : null;
+          })()}
           <input
             type="file"
             accept="application/pdf,.pdf"
@@ -169,6 +229,16 @@ export function AdminInterviewDetailsPage() {
           onSubmit={(event) => submitUpload(event, "role_description")}
         >
           <h3>Upload Role Description</h3>
+          {(() => {
+            const doc = documents.find(
+              (d) => d.document_type === "role_description"
+            );
+            return doc ? (
+              <p className="doc-info">
+                Current: {doc.filename} ({doc.extracted_character_count} chars)
+              </p>
+            ) : null;
+          })()}
           <input
             type="file"
             accept="application/pdf,.pdf"
@@ -182,6 +252,66 @@ export function AdminInterviewDetailsPage() {
           </button>
           {roleState.message ? <p>{roleState.message}</p> : null}
         </form>
+      </div>
+
+      <div className="analyze-section">
+        <button
+          type="button"
+          onClick={handleAnalyze}
+          disabled={isAnalyzing || !selectedInterviewId}
+        >
+          {isAnalyzing ? "Analyzing..." : "Run Match Analysis"}
+        </button>
+
+        {analysisError ? (
+          <p className="form-error">{analysisError}</p>
+        ) : null}
+
+        {analysisResult ? (
+          <div className="analysis-result">
+            <h3>Match Analysis</h3>
+
+            <div className="analysis-block">
+              <strong>Role Summary</strong>
+              <p>{analysisResult.role_summary}</p>
+            </div>
+
+            <div className="analysis-block">
+              <strong>Candidate Summary</strong>
+              <p>{analysisResult.candidate_summary}</p>
+            </div>
+
+            <div className="analysis-block">
+              <strong>Focus Areas</strong>
+              {analysisResult.focus_areas.length === 0 ? (
+                <p>None identified.</p>
+              ) : (
+                <ul>
+                  {analysisResult.focus_areas.map((area, idx) => (
+                    <li key={idx}>
+                      <strong>{area.topic}</strong>: {area.reason}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="analysis-block">
+              <strong>Potential Gaps</strong>
+              {analysisResult.potential_gaps.length === 0 ? (
+                <p>None identified.</p>
+              ) : (
+                <ul>
+                  {analysisResult.potential_gaps.map((gap, idx) => (
+                    <li key={idx}>
+                      <strong>{gap.topic}</strong>: {gap.reason}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        ) : null}
       </div>
     </section>
   );

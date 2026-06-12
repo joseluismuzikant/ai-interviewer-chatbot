@@ -135,6 +135,44 @@ button:disabled {
   background-color: #ffffff;
 }
 
+.analyze-section {
+  margin-top: 1.5rem;
+}
+
+.analysis-result {
+  margin-top: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.analysis-result h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.analysis-block {
+  margin-top: 0.75rem;
+}
+
+.analysis-block strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.analysis-block p {
+  margin: 0;
+}
+
+.analysis-block ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.analysis-block li {
+  margin-bottom: 0.35rem;
+}
+
 .upload-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -162,4 +200,12 @@ button:disabled {
 .upload-card p {
   margin: 0;
   font-size: 0.95rem;
+}
+
+.upload-card .doc-info {
+  font-size: 0.85rem;
+  color: #4b5563;
+  background-color: #f3f4f6;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
 }

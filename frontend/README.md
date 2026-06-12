@@ -12,8 +12,9 @@ This directory contains the MVP frontend for the AI Interviewer Chatbot.
 - Redirect to `/admin/interviews/:id` after creation
 - Interview selector dropdown on interview details page (titles from API)
 - Resume and role-description PDF uploads on interview details page
-- Upload status feedback with extracted character count
+- Upload status feedback with extracted character count + UI refresh on upload
 - Friendlier error messages from backend `detail`
+- Match Analysis section rendering structured LLM JSON output (`role_summary`, `candidate_summary`, `focus_areas`, `potential_gaps`)
 
 ## Run locally
 
@@ -46,14 +47,19 @@ The app will run on Vite's default local URL (usually `http://localhost:5173`).
 - Backend API must be running at `VITE_API_URL` (default: `http://localhost:8000`).
 - Backend must be configured with Supabase and schema from `docs/supabase_schema.sql` applied.
 
-## Admin document upload flow (Step 5)
+## Admin document upload and analysis flow (Step 5 & 6)
 
 1. Create one or more interviews from `/admin`.
 2. On `/admin/interviews/:id`, choose an interview in the dropdown.
 3. Upload:
    - Resume PDF
    - Role Description PDF
-4. Each upload calls `POST /interviews/{selectedInterviewId}/documents`.
-5. UI shows status message with extracted character count.
+4. Each upload replaces the previous document for that type.
+5. UI refreshes to show the newly uploaded filename and character count.
+6. Click **Run Match Analysis**.
+7. App calls `POST /interviews/{selectedInterviewId}/analyze`.
+8. UI renders structured LLM feedback (summaries, focus areas, and gaps).
 
-Step 5 backend requirement: Supabase Storage bucket `interview-documents` must exist.
+Backend requirements:
+- Supabase Storage bucket `interview-documents` must exist.
+- `LLM_PROVIDER` must be valid (e.g. `mock` or valid credentials for `openai`, `gemini`, `deepseek`).

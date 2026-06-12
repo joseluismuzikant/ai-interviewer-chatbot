@@ -47,6 +47,27 @@ create index idx_messages_interview_id
 create index idx_messages_interview_question
   on messages(interview_id, question_number);
 
+create table documents (
+  id uuid primary key default gen_random_uuid(),
+  interview_id uuid references interviews(id) on delete cascade,
+  document_type text not null,
+  filename text not null,
+  storage_path text not null,
+  mime_type text,
+  extracted_text text,
+  extracted_character_count int default 0,
+  created_at timestamptz default now(),
+
+  constraint documents_type_check
+    check (document_type in ('resume', 'role_description'))
+);
+
+create index idx_documents_interview_id
+  on documents(interview_id);
+
+create unique index idx_documents_interview_type
+  on documents(interview_id, document_type);
+
 create or replace function update_updated_at_column()
 returns trigger as $$
 begin

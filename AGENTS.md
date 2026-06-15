@@ -309,6 +309,15 @@ Backend endpoint:
 
 ```http
 POST /interviews/{interview_id}/analyze
+→ load resume extracted_text from documents
+→ load role_description extracted_text from documents
+→ validate both exist
+→ call OpenAI
+→ store result in interviews.match_analysis_json
+→ update status to READY
+400 if resume is missing
+400 if role_description is missing
+400 if extracted text is empty
 ```
 
 Input:
@@ -350,6 +359,33 @@ Frontend:
 - Add Analyze button.
 - Display match analysis.
 
+In the Interview Details page, improve the document upload behavior.
+
+Requirements:
+
+1. For each document type, show the latest uploaded document filename:
+   - resume
+   - role_description
+
+2. When the page loads, call GET /interviews/{interview_id}/documents and display the current uploaded document metadata.
+
+3. When the user uploads a new document for an existing document type:
+   - replace the previous document of that same type;
+   - delete or overwrite the previous record/file if the backend already supports it;
+   - if the backend does not support deletion yet, update the upload endpoint to behave as an upsert by interview_id + document_type.
+
+4. After upload succeeds:
+   - refresh the document list;
+   - show the new filename;
+   - show extracted_character_count;
+   - show a success message.
+
+5. Keep the implementation simple for the MVP.
+
+Do not change the overall architecture.
+Do not add authentication.
+Do not start Step 7 yet.
+
 ---
 
 # Step 7 — Interview start
@@ -362,6 +398,7 @@ POST /interviews/{interview_id}/start
 
 Behavior:
 
+- Only allow start if interview.status = READY
 - Validate interview has match analysis.
 - Set status to `IN_PROGRESS`.
 - Generate first question using focus areas.
@@ -382,6 +419,13 @@ Backend endpoint:
 
 ```http
 POST /interviews/{interview_id}/answer
+
+→ store answer
+→ score answer
+→ update difficulty
+→ generate next question
+→ store next question
+- Important: stop after target_questions.
 ```
 
 Request:
@@ -432,12 +476,21 @@ Frontend:
 
 # Step 9 — Final report
 
-Backend endpoint:
+Backend endpoints:
 
 ```http
 POST /interviews/{interview_id}/report
 GET /interviews/{interview_id}/report
 ```
+The report should use:
+messages
+scores
+telemetry
+match_analysis_json
+
+POST store it in:
+interviews.report_json
+and update status to: COMPLETED
 
 Report JSON:
 

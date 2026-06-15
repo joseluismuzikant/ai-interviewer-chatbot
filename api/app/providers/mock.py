@@ -1,11 +1,12 @@
 from app.providers.base import LLMProvider
+from app.schemas import MatchAnalysis
 
 
 class MockProvider(LLMProvider):
     def analyze_match(
         self, resume_text: str, role_description_text: str
     ) -> dict:
-        return {
+        analysis = {
             "role_summary": (
                 "The role requires a Senior Full-Stack Engineer proficient in "
                 "Python, TypeScript, React, FastAPI, and cloud infrastructure."
@@ -41,3 +42,4 @@ class MockProvider(LLMProvider):
                 },
             ],
         }
+        return MatchAnalysis.model_validate(analysis).model_dump()

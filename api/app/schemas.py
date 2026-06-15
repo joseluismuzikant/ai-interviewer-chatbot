@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictStr
 
 
 class HealthResponse(BaseModel):
@@ -28,16 +28,27 @@ class InterviewResponse(BaseModel):
     updated_at: datetime | None = None
 
 
-class AnalysisItem(BaseModel):
-    topic: str
-    reason: str
+class FocusArea(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    topic: StrictStr
+    reason: StrictStr
 
 
-class MatchAnalysisResponse(BaseModel):
-    role_summary: str
-    candidate_summary: str
-    focus_areas: list[AnalysisItem]
-    potential_gaps: list[AnalysisItem]
+class PotentialGap(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    topic: StrictStr
+    reason: StrictStr
+
+
+class MatchAnalysis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role_summary: StrictStr
+    candidate_summary: StrictStr
+    focus_areas: list[FocusArea]
+    potential_gaps: list[PotentialGap]
 
 
 class DocumentUploadResponse(BaseModel):

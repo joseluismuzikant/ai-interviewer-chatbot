@@ -19,7 +19,7 @@ from app.schemas import (
     HealthResponse,
     InterviewCreateRequest,
     InterviewResponse,
-    MatchAnalysisResponse,
+    MatchAnalysis,
 )
 from app.supabase_client import get_supabase_client
 
@@ -184,13 +184,13 @@ def delete_document(
 
 @app.post(
     "/interviews/{interview_id}/analyze",
-    response_model=MatchAnalysisResponse,
+    response_model=MatchAnalysis,
 )
 def analyze_interview(
     interview_id: UUID,
     interview_service: InterviewService = Depends(get_interview_service),
     analysis_service: AnalysisService = Depends(get_analysis_service),
-) -> MatchAnalysisResponse:
+) -> MatchAnalysis:
     interview_service.get_interview(interview_id)
     result = analysis_service.analyze_interview(interview_id)
-    return MatchAnalysisResponse(**result)
+    return MatchAnalysis(**result)

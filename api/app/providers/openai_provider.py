@@ -1,9 +1,11 @@
 import json
 
 from openai import OpenAI
+from pydantic import ValidationError
 
 from app.config import Settings
 from app.providers.base import LLMProvider
+from app.schemas import MatchAnalysis
 
 
 class OpenAIProvider(LLMProvider):
@@ -57,21 +59,11 @@ class OpenAIProvider(LLMProvider):
         try:
             result = json.loads(content)
         except json.JSONDecodeError as exc:
-            raise RuntimeError(
-                f"OpenAI returned invalid JSON: {exc}"
-            ) from exc
+            raise RuntimeError("LLM returned invalid match analysis JSON.") from exc
 
-        validated = {
-            "role_summary": str(result.get("role_summary", "")),
-            "candidate_summary": str(result.get("candidate_summary", "")),
-            "focus_areas": [
-                {"topic": str(f.get("topic", "")), "reason": str(f.get("reason", ""))}
-                for f in result.get("focus_areas", [])
-            ],
-            "potential_gaps": [
-                {"topic": str(g.get("topic", "")), "reason": str(g.get("reason", ""))}
-                for g in result.get("potential_gaps", [])
-            ],
-        }
+        try:
+            validated = MatchAnalysis.model_validate(result)
+        except ValidationError as exc:
+            raise RuntimeError("LLM returned invalid match analysis JSON.") from exc
 
-        return validated
+        return validated.model_dump()

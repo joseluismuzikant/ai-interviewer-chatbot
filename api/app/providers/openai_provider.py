@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from app.config import Settings
 from app.providers.base import LLMProvider
-from app.schemas import InterviewQuestion, MatchAnalysis
+from app.schemas import AnswerEvaluation, InterviewQuestion, MatchAnalysis
 
 
 class OpenAIProvider(LLMProvider):
@@ -108,5 +108,47 @@ class OpenAIProvider(LLMProvider):
             validated = InterviewQuestion.model_validate(result)
         except ValidationError as exc:
             raise RuntimeError("LLM returned invalid question JSON.") from exc
+
+        return validated.model_dump()
+
+    def evaluate_answer(self, context: dict) -> dict:
+        system_prompt = (
+            "You are a technical interviewer evaluating a candidate answer. "
+            "Provide strict JSON scoring output."
+        )
+        user_prompt = (
+            f"Context JSON:\n{json.dumps(context)}\n\n"
+            "Return ONLY valid JSON with this exact structure:\n"
+            '{"score":7,"rationale":"string","evidence":"string","followup_hint":"string"}'
+        )
+
+        try:
+            response = self._get_client().chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.2,
+            )
+        except Exception as exc:
+            raise RuntimeError(f"OpenAI API call failed: {exc}") from exc
+
+        content = response.choices[0].message.content or "{}"
+        content = content.strip()
+        if content.startswith("```"):
+            content = content.strip("`")
+            if content.startswith("json"):
+                content = content[4:]
+
+        try:
+            result = json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("LLM returned invalid answer evaluation JSON.") from exc
+
+        try:
+            validated = AnswerEvaluation.model_validate(result)
+        except ValidationError as exc:
+            raise RuntimeError("LLM returned invalid answer evaluation JSON.") from exc
 
         return validated.model_dump()

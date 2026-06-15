@@ -1,5 +1,5 @@
 from app.providers.base import LLMProvider
-from app.schemas import InterviewQuestion, MatchAnalysis
+from app.schemas import AnswerEvaluation, InterviewQuestion, MatchAnalysis
 
 
 class MockProvider(LLMProvider):
@@ -45,19 +45,31 @@ class MockProvider(LLMProvider):
         return MatchAnalysis.model_validate(analysis).model_dump()
 
     def generate_question(self, context: dict) -> dict:
+        question_number = int(context.get("question_number", 1))
         question = {
             "question": (
                 "Can you describe how you would design a scalable REST API "
                 "for a financial services application?"
+                if question_number == 1
+                else "How would you improve that API's reliability and observability under production load?"
             ),
-            "topic": "Backend API design",
+            "topic": "Backend API design" if question_number == 1 else "Reliability and observability",
             "difficulty": 5,
             "expected_signals": [
-                "API resource design",
+                "API resource design" if question_number == 1 else "SLO and metrics definition",
                 "validation and error handling",
-                "security considerations",
-                "database transaction boundaries",
+                "security considerations" if question_number == 1 else "failure-mode planning",
+                "database transaction boundaries" if question_number == 1 else "alerting strategy",
                 "observability",
             ],
         }
         return InterviewQuestion.model_validate(question).model_dump()
+
+    def evaluate_answer(self, context: dict) -> dict:
+        evaluation = {
+            "score": 7,
+            "rationale": "The answer demonstrates a solid understanding of the topic with enough technical detail for the MVP.",
+            "evidence": "The candidate describes API design, validation, and scalability considerations.",
+            "followup_hint": "Ask the candidate to go deeper into error handling, observability, and production trade-offs.",
+        }
+        return AnswerEvaluation.model_validate(evaluation).model_dump()

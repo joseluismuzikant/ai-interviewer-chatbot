@@ -8,6 +8,7 @@ import {
   getInterview,
   getInterviewMessages,
   startInterview,
+  submitAnswer,
 } from "../api/client";
 
 const UUID_REGEX =
@@ -21,6 +22,10 @@ export function CandidateInterviewPage() {
 
   const [interview, setInterview] = useState<InterviewResponse | null>(null);
   const [question, setQuestion] = useState<StartQuestion | null>(null);
+  const [answerText, setAnswerText] = useState("");
+  const [pasteDetected, setPasteDetected] = useState(false);
+  const [questionShownAt, setQuestionShownAt] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -96,6 +101,8 @@ export function CandidateInterviewPage() {
     try {
       const started = await startInterview(interviewId);
       setQuestion(started.question);
+      setAnswerText("");
+      setPasteDetected(false);
       setInterview((previous) =>
         previous
           ? { ...previous, status: started.status, current_question_number: 1 }
@@ -107,6 +114,63 @@ export function CandidateInterviewPage() {
       );
     } finally {
       setIsStarting(false);
+    }
+  }
+
+  useEffect(() => {
+    if (question) {
+      setQuestionShownAt(Date.now());
+      setAnswerText("");
+      setPasteDetected(false);
+    }
+  }, [question?.id, question?.question_number, question?.content]);
+
+  async function handleSubmitAnswer() {
+    if (!hasValidInterviewId || !question) {
+      return;
+    }
+    const trimmed = answerText.trim();
+    if (!trimmed) {
+      setErrorMessage("Answer cannot be empty.");
+      return;
+    }
+
+    const responseTime = questionShownAt ? Date.now() - questionShownAt : 0;
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await submitAnswer(interviewId, {
+        answer: trimmed,
+        response_time_ms: responseTime,
+        paste_detected: pasteDetected,
+      });
+
+      if (response.status === "COMPLETED") {
+        setInterview((previous) =>
+          previous ? { ...previous, status: "COMPLETED" } : previous
+        );
+        setQuestion(null);
+      } else {
+        setInterview((previous) =>
+          previous
+            ? {
+                ...previous,
+                status: "IN_PROGRESS",
+                current_question_number: response.next_question?.question_number ??
+                  previous.current_question_number,
+              }
+            : previous
+        );
+        setQuestion(response.next_question);
+      }
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Could not submit answer"
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -132,6 +196,12 @@ export function CandidateInterviewPage() {
       <p>Interview ID: {id ?? "(none)"}</p>
       <p>Status: {interview?.status ?? "Unknown"}</p>
 
+      {question && interview?.target_questions ? (
+        <p>
+          Question {question.question_number} of {interview.target_questions}
+        </p>
+      ) : null}
+
       {interview?.status === "READY" ? (
         <button
           type="button"
@@ -140,6 +210,10 @@ export function CandidateInterviewPage() {
         >
           {isStarting ? "Starting..." : "Start Interview"}
         </button>
+      ) : null}
+
+      {interview?.status === "COMPLETED" ? (
+        <p>Interview completed. Thank you for your responses.</p>
       ) : null}
 
       {question ? (
@@ -157,18 +231,28 @@ export function CandidateInterviewPage() {
             <strong>Difficulty</strong>
             <p>{question.difficulty}</p>
           </div>
-          <div className="analysis-block">
-            <strong>Expected Signals</strong>
-            {question.expected_signals.length === 0 ? (
-              <p>No expected signals available.</p>
-            ) : (
-              <ul>
-                {question.expected_signals.map((signal, index) => (
-                  <li key={`${signal}-${index}`}>{signal}</li>
-                ))}
-              </ul>
-            )}
-          </div>
+          {interview?.status !== "COMPLETED" ? (
+            <div className="analysis-block">
+              <strong>Your Answer</strong>
+              <textarea
+                value={answerText}
+                onChange={(event) => setAnswerText(event.target.value)}
+                onPaste={() => setPasteDetected(true)}
+                rows={6}
+                placeholder="Type your answer here..."
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                onClick={handleSubmitAnswer}
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? "Evaluating answer and preparing next question..."
+                  : "Submit Answer"}
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>

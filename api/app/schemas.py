@@ -60,6 +60,23 @@ class InterviewQuestion(BaseModel):
     expected_signals: list[StrictStr]
 
 
+class AnswerRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    answer: StrictStr = Field(min_length=1)
+    response_time_ms: StrictInt = Field(ge=0)
+    paste_detected: bool
+
+
+class AnswerEvaluation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    score: StrictInt = Field(ge=1, le=10)
+    rationale: StrictStr = Field(min_length=1)
+    evidence: StrictStr = Field(min_length=1)
+    followup_hint: StrictStr = Field(min_length=1)
+
+
 class StartedQuestion(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -77,6 +94,15 @@ class InterviewStartResponse(BaseModel):
     interview_id: UUID
     status: Literal["IN_PROGRESS"]
     question: StartedQuestion
+
+
+class InterviewAnswerResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    interview_id: UUID
+    status: Literal["IN_PROGRESS", "COMPLETED"]
+    evaluation: AnswerEvaluation
+    next_question: StartedQuestion | None = None
 
 
 class DocumentUploadResponse(BaseModel):

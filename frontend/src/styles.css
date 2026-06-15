@@ -173,6 +173,15 @@ button:disabled {
   margin-bottom: 0.35rem;
 }
 
+.analysis-block textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  font: inherit;
+  margin-bottom: 0.75rem;
+}
+
 .upload-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

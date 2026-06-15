@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from supabase import Client
 
 from app.providers.base import LLMProvider
+from app.question_meta_store import get_question_meta, set_question_meta
 from app.schemas import InterviewStartResponse, StartedQuestion
 
 
@@ -11,7 +12,6 @@ class InterviewStartService:
     def __init__(self, supabase: Client, llm: LLMProvider) -> None:
         self.supabase = supabase
         self.llm = llm
-        self._question_meta_cache: dict[str, dict] = {}
 
     def start_interview(self, interview: dict) -> InterviewStartResponse:
         interview_id = interview.get("id")
@@ -99,11 +99,15 @@ class InterviewStartService:
                 detail="Could not update interview status.",
             ) from exc
 
-        self._question_meta_cache[str(interview_id)] = {
-            "topic": generated_question["topic"],
-            "difficulty": current_difficulty,
-            "expected_signals": generated_question["expected_signals"],
-        }
+        set_question_meta(
+            str(interview_id),
+            1,
+            {
+                "topic": generated_question["topic"],
+                "difficulty": current_difficulty,
+                "expected_signals": generated_question["expected_signals"],
+            },
+        )
 
         question = StartedQuestion(
             id=UUID(inserted_message["id"]) if isinstance(inserted_message, dict) and inserted_message.get("id") else None,
@@ -139,7 +143,8 @@ class InterviewStartService:
         interview_id: UUID,
         latest_assistant: dict,
     ) -> InterviewStartResponse:
-        cached_meta = self._question_meta_cache.get(str(interview_id), {})
+        question_number = int(latest_assistant.get("question_number") or 1)
+        cached_meta = get_question_meta(str(interview_id), question_number) or {}
         difficulty_level = latest_assistant.get("difficulty_level")
         question = StartedQuestion(
             id=UUID(latest_assistant["id"]) if latest_assistant.get("id") else None,
@@ -150,7 +155,7 @@ class InterviewStartService:
                 if difficulty_level is not None
                 else cached_meta.get("difficulty", 0)
             ),
-            question_number=int(latest_assistant.get("question_number") or 1),
+            question_number=question_number,
             expected_signals=list(cached_meta.get("expected_signals", [])),
         )
         return InterviewStartResponse(

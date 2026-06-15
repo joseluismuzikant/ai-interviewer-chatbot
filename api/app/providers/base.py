@@ -11,3 +11,7 @@ class LLMProvider(ABC):
     @abstractmethod
     def generate_question(self, context: dict) -> dict:
         ...
+
+    @abstractmethod
+    def evaluate_answer(self, context: dict) -> dict:
+        ...

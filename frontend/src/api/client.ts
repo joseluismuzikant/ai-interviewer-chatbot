@@ -142,6 +142,26 @@ export type StartInterviewResponse = {
   question: StartQuestion;
 };
 
+export type AnswerEvaluation = {
+  score: number;
+  rationale: string;
+  evidence: string;
+  followup_hint: string;
+};
+
+export type SubmitAnswerRequest = {
+  answer: string;
+  response_time_ms: number;
+  paste_detected: boolean;
+};
+
+export type SubmitAnswerResponse = {
+  interview_id: string;
+  status: "IN_PROGRESS" | "COMPLETED";
+  evaluation: AnswerEvaluation;
+  next_question: StartQuestion | null;
+};
+
 export type MessageResponse = {
   id: string;
   interview_id: string;
@@ -206,6 +226,25 @@ export async function getInterviewMessages(
   }
 
   return response.json() as Promise<MessageResponse[]>;
+}
+
+export async function submitAnswer(
+  interviewId: string,
+  payload: SubmitAnswerRequest
+): Promise<SubmitAnswerResponse> {
+  const response = await fetch(`${API_URL}/interviews/${interviewId}/answer`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Submit answer failed"));
+  }
+
+  return response.json() as Promise<SubmitAnswerResponse>;
 }
 
 export async function uploadInterviewDocument(

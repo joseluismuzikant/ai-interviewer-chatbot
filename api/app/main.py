@@ -8,16 +8,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.analysis_service import AnalysisService
 from app.config import get_settings
 from app.document_service import DocumentService
+from app.interview_answer_service import InterviewAnswerService
 from app.interview_start_service import InterviewStartService
 from app.interview_service import InterviewService
 from app.llm import get_llm_client
 from app.schemas import (
+    AnswerRequest,
     DocumentDeleteResponse,
     DocumentListResponse,
     DocumentRecord,
     DocumentStorageListResponse,
     DocumentUploadResponse,
     HealthResponse,
+    InterviewAnswerResponse,
     InterviewCreateRequest,
     InterviewStartResponse,
     InterviewResponse,
@@ -85,6 +88,14 @@ def get_analysis_service() -> AnalysisService:
 @lru_cache
 def get_interview_start_service() -> InterviewStartService:
     return InterviewStartService(
+        supabase=get_cached_supabase_client(),
+        llm=get_cached_llm_client(),
+    )
+
+
+@lru_cache
+def get_interview_answer_service() -> InterviewAnswerService:
+    return InterviewAnswerService(
         supabase=get_cached_supabase_client(),
         llm=get_cached_llm_client(),
     )
@@ -228,3 +239,17 @@ def get_interview_messages(
     interview_service.get_interview(interview_id)
     messages = interview_service.list_messages(interview_id)
     return [MessageResponse(**message) for message in messages]
+
+
+@app.post(
+    "/interviews/{interview_id}/answer",
+    response_model=InterviewAnswerResponse,
+)
+def submit_answer(
+    interview_id: UUID,
+    payload: AnswerRequest,
+    interview_service: InterviewService = Depends(get_interview_service),
+    interview_answer_service: InterviewAnswerService = Depends(get_interview_answer_service),
+) -> InterviewAnswerResponse:
+    interview = interview_service.get_interview(interview_id)
+    return interview_answer_service.submit_answer(interview, payload)

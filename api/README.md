@@ -23,10 +23,11 @@ This directory contains the backend API for the AI Interviewer Chatbot MVP.
 - Filename normalization to `snake_case` before storing in Storage and DB
 - `POST /interviews/{interview_id}/analyze` (LLM match analysis)
 - `POST /interviews/{interview_id}/start` (start candidate interview)
+- `POST /interviews/{interview_id}/answer` (score answer + generate next question)
 - `GET /interviews/{interview_id}/messages` (ordered transcript)
 - Multi-provider LLM factory (`mock`, `openai`, `gemini`, `deepseek`)
 - Clean HTTP 503 error handling for LLM provider failures (e.g. DeepSeek insufficient balance)
-- Strict LLM JSON validation for match analysis and generated first question
+- Strict LLM JSON validation for match analysis, generated questions, and answer evaluation
 
 ## Run locally
 
@@ -153,9 +154,18 @@ Get interview messages:
 curl http://localhost:8000/interviews/<interview_id>/messages
 ```
 
+Submit candidate answer:
+
+```bash
+curl -X POST http://localhost:8000/interviews/<interview_id>/answer \
+  -H "Content-Type: application/json" \
+  -d '{"answer":"I would design clear resource-oriented endpoints with strong validation and observability.","response_time_ms":45000,"paste_detected":false}'
+```
+
 Notes:
 
 - Upload endpoint normalizes filename to `snake_case` before saving.
 - Upload endpoint replaces previous documents of the same type (effectively an upsert).
 - LLM Provider is controlled by `LLM_PROVIDER` in `.env` (options: `mock`, `openai`, `gemini`, `deepseek`).
 - Invalid first-question JSON from any provider returns `503` with `LLM returned invalid question JSON.`
+- Invalid answer-evaluation JSON from any provider returns `503` with `LLM returned invalid answer evaluation JSON.`

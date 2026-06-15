@@ -17,6 +17,9 @@ This directory contains the MVP frontend for the AI Interviewer Chatbot.
 - Match Analysis section rendering structured LLM JSON output (`role_summary`, `candidate_summary`, `focus_areas`, `potential_gaps`)
 - Candidate interview start flow with status-aware UI
 - Candidate page validation for missing/invalid interview ids
+- Candidate answer submission flow (`POST /interviews/{id}/answer`)
+- Candidate progress display (`Question X of Y`) and interview completion state
+- Candidate UI hides internal evaluation details/rubrics from the candidate view
 
 ## Run locally
 
@@ -78,5 +81,26 @@ Backend requirements:
    - question content
    - topic
    - difficulty
-   - expected signals
 6. If status is `IN_PROGRESS`, page attempts to display latest assistant question.
+
+## Candidate answer flow (Step 8)
+
+1. On `/interview/:id`, after the first question is shown, candidate types an answer.
+2. Candidate submits answer with:
+   - answer text
+   - tracked response time
+   - paste-detected flag
+3. Frontend calls `POST /interviews/{id}/answer`.
+4. If interview remains `IN_PROGRESS`, UI renders the next question.
+5. If target question count is reached, UI shows a completion message.
+
+Displayed in candidate UI:
+- current interview status
+- question text
+- topic
+- difficulty
+- question progress (`Question X of Y`)
+
+Not displayed to candidate (intentional for MVP):
+- raw evaluation payload (`score`, `rationale`, `evidence`, `followup_hint`)
+- internal `expected_signals`

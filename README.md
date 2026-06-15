@@ -62,11 +62,17 @@ Implemented now:
 - Frontend analysis button rendering structured match JSON output
 - Candidate page start-interview flow (READY -> IN_PROGRESS)
 - Candidate page guard for missing/invalid interview IDs
+- Answer submission endpoint with candidate reply persistence:
+  - `POST /interviews/{interview_id}/answer`
+- LLM answer evaluation with strict JSON schema validation
+- Deterministic difficulty updates (`+0.5` / `-0.5`, clamp `3..10`)
+- Next-question generation loop until `target_questions` is reached
+- Interview completion transition when target count is reached
+- Candidate UI question-answer loop with loading/error handling and progress (`Question X of Y`)
+- Candidate UI intentionally hides internal evaluation details and expected signals
 
 Not implemented yet (planned):
 
-- Answer submission endpoint and candidate reply persistence
-- Answer scoring + adaptive difficulty updates
 - Final report generation
 - Docker setup for local orchestration
 
@@ -85,6 +91,7 @@ flowchart LR
     DOC["Document Service<br/>PDF upload + PyMuPDF extraction"]
     AN["Analysis Service<br/>Match analysis"]
     STS["Interview Start Service<br/>First question generation"]
+    AS["Interview Answer Service<br/>Score answer + next question"]
     LLM["LLM Provider Layer"]
   end
 
@@ -107,6 +114,7 @@ flowchart LR
   B --> DOC
   B --> AN
   B --> STS
+  B --> AS
 
   DOC -->|"store original PDF"| ST
   DOC -->|"store metadata + extracted_text"| DB
@@ -116,6 +124,8 @@ flowchart LR
   AN --> LLM
   STS -->|"read match_analysis_json + status"| DB
   STS --> LLM
+  AS -->|"store candidate answer + score<br/>update difficulty + question number"| DB
+  AS --> LLM
   LLM --> M
   LLM --> O
   LLM --> G
@@ -123,6 +133,7 @@ flowchart LR
 
   AN -->|"persist match_analysis_json<br/>status = READY"| DB
   STS -->|"insert assistant message<br/>set status = IN_PROGRESS"| DB
+  AS -->|"insert candidate + assistant messages<br/>status IN_PROGRESS/COMPLETED"| DB
 ```
 
 ## Repository Layout
@@ -144,6 +155,8 @@ ai-interviewer-chatbot/
 │       ├── document_service.py
 │       ├── analysis_service.py
 │       ├── interview_start_service.py
+│       ├── interview_answer_service.py
+│       ├── question_meta_store.py
 │       └── providers/
 │           ├── base.py
 │           ├── mock.py
@@ -159,7 +172,8 @@ ai-interviewer-chatbot/
 │       ├── api/client.ts
 │       └── pages/
 └── docs/
-    └── AI-Interview-Chatbot-Blueprint 2.pdf
+    ├── AI-Interview-Chatbot-Blueprint 2.pdf
+    └── supabase_schema.sql
 ```
 
 ## Prerequisites
@@ -208,9 +222,9 @@ npm run dev
 
 Frontend typically runs at: `http://localhost:5173`
 
-## Quick Smoke Test (Steps 1-7)
+## Quick Smoke Test (Steps 1-8)
 
-Use this checklist to verify the MVP flow up to interview start (before Step 8 answer submission).
+Use this checklist to verify the MVP flow through answer submission and next-question generation.
 
 1. Create interview:
 
@@ -279,6 +293,18 @@ curl -s http://localhost:8000/interviews/INTERVIEW_ID/messages
 
 Expected: at least one `assistant` message with `question_number=1`.
 
+8. Submit one candidate answer (Step 8):
+
+```bash
+curl -s -X POST http://localhost:8000/interviews/INTERVIEW_ID/answer \
+  -H "Content-Type: application/json" \
+  -d '{"answer":"I would design resource-first APIs with validation, authz boundaries, and observability.","response_time_ms":32000,"paste_detected":false}'
+```
+
+Expected:
+- If there are remaining questions: `status` is `IN_PROGRESS` and `next_question` is populated.
+- If target is reached: `status` is `COMPLETED` and `next_question` is `null`.
+
 Frontend smoke flow:
 
 1. Open `/admin`, create interview, and go to interview details.
@@ -286,6 +312,7 @@ Frontend smoke flow:
 3. Click **Run Match Analysis**.
 4. Open **Open Candidate Interview View**.
 5. Click **Start Interview** and verify first question is displayed.
+6. Submit an answer and verify the next question appears (or completion if target reached).
 
 ## Environment Variables
 
@@ -303,7 +330,7 @@ Based on `api/.env.example`:
 - `DEEPSEEK_API_KEY=`
 - `DEEPSEEK_MODEL=deepseek-chat`
 
-Note: these are scaffolded now and will be used in upcoming steps.
+Note: `LLM_PROVIDER=mock` is recommended for local MVP testing without external API credentials.
 
 ### Frontend (`frontend/.env`)
 
@@ -326,6 +353,7 @@ Based on `frontend/.env.example`:
 - `DELETE /interviews/{interview_id}/documents/{filename}` -> deletes document from Storage + DB
 - `POST /interviews/{interview_id}/analyze` -> triggers LLM match analysis and returns structured JSON
 - `POST /interviews/{interview_id}/start` -> starts interview and returns first question
+- `POST /interviews/{interview_id}/answer` -> stores answer, scores it, updates difficulty, and returns next question or completion
 - `GET /interviews/{interview_id}/messages` -> returns interview transcript ordered by `created_at`
 
 ### Frontend
@@ -366,10 +394,9 @@ The implementation roadmap is defined in `AGENTS.md` (Steps 1-11).
 
 ## Next Milestones
 
-1. Answer submission + scoring endpoint (`POST /interviews/{id}/answer`)
-2. Adaptive difficulty progression
-3. Final report generation
-4. Dockerize API + frontend for local runs
+1. Final report generation (`POST /interviews/{id}/report`, `GET /interviews/{id}/report`)
+2. Admin report/transcript/score UI
+3. Dockerize API + frontend for local runs
 
 ## Current document behavior
 
@@ -392,3 +419,12 @@ The backend supports multiple LLM providers. Configure them in `api/.env`:
 - `POST /interviews/{id}/start` only starts interviews in `READY` or returns latest assistant question for `IN_PROGRESS`.
 - First question is generated from `match_analysis_json.focus_areas` via the selected LLM provider.
 - Invalid generated question JSON returns `503` with `LLM returned invalid question JSON.`
+
+## Current answer behavior
+
+- `POST /interviews/{id}/answer` is accepted only for `IN_PROGRESS` interviews.
+- Candidate answer is stored in `messages` with `role=candidate`, timing, and paste telemetry.
+- Answer evaluation is generated via provider abstraction and validated with strict schema.
+- Difficulty updates follow MVP rules: `score >= 7` => `+0.5`, `score <= 4` => `-0.5`, clamped to `3..10`.
+- Response returns either next assistant question (`IN_PROGRESS`) or interview completion (`COMPLETED`).
+- Invalid evaluation JSON returns `503` with `LLM returned invalid answer evaluation JSON.`

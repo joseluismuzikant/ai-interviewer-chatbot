@@ -11,8 +11,7 @@ function App() {
         <h1>AI Interviewer Chatbot</h1>
         <nav>
           <Link to="/admin">Admin</Link>
-          <Link to="/admin/interviews/sample-id">Interview Details</Link>
-          <Link to="/interview/sample-id">Candidate Interview</Link>
+          <Link to="/admin/interviews">Interview Details</Link>
         </nav>
       </header>
 
@@ -20,10 +19,12 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/admin" replace />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/interviews" element={<AdminInterviewDetailsPage />} />
           <Route
             path="/admin/interviews/:id"
             element={<AdminInterviewDetailsPage />}
           />
+          <Route path="/interview" element={<CandidateInterviewPage />} />
           <Route path="/interview/:id" element={<CandidateInterviewPage />} />
         </Routes>
       </main>

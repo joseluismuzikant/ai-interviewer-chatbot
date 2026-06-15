@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.analysis_service import AnalysisService
 from app.config import get_settings
 from app.document_service import DocumentService
+from app.interview_start_service import InterviewStartService
 from app.interview_service import InterviewService
 from app.llm import get_llm_client
 from app.schemas import (
@@ -18,7 +19,9 @@ from app.schemas import (
     DocumentUploadResponse,
     HealthResponse,
     InterviewCreateRequest,
+    InterviewStartResponse,
     InterviewResponse,
+    MessageResponse,
     MatchAnalysis,
 )
 from app.supabase_client import get_supabase_client
@@ -74,6 +77,14 @@ def get_llm_client_instance():
 
 def get_analysis_service() -> AnalysisService:
     return AnalysisService(
+        supabase=get_cached_supabase_client(),
+        llm=get_cached_llm_client(),
+    )
+
+
+@lru_cache
+def get_interview_start_service() -> InterviewStartService:
+    return InterviewStartService(
         supabase=get_cached_supabase_client(),
         llm=get_cached_llm_client(),
     )
@@ -194,3 +205,26 @@ def analyze_interview(
     interview_service.get_interview(interview_id)
     result = analysis_service.analyze_interview(interview_id)
     return MatchAnalysis(**result)
+
+
+@app.post(
+    "/interviews/{interview_id}/start",
+    response_model=InterviewStartResponse,
+)
+def start_interview(
+    interview_id: UUID,
+    interview_service: InterviewService = Depends(get_interview_service),
+    interview_start_service: InterviewStartService = Depends(get_interview_start_service),
+) -> InterviewStartResponse:
+    interview = interview_service.get_interview(interview_id)
+    return interview_start_service.start_interview(interview)
+
+
+@app.get("/interviews/{interview_id}/messages", response_model=list[MessageResponse])
+def get_interview_messages(
+    interview_id: UUID,
+    interview_service: InterviewService = Depends(get_interview_service),
+) -> list[MessageResponse]:
+    interview_service.get_interview(interview_id)
+    messages = interview_service.list_messages(interview_id)
+    return [MessageResponse(**message) for message in messages]

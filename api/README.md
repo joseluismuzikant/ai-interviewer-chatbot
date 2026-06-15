@@ -22,8 +22,11 @@ This directory contains the backend API for the AI Interviewer Chatbot MVP.
 - Upsert document metadata/content into `documents` table
 - Filename normalization to `snake_case` before storing in Storage and DB
 - `POST /interviews/{interview_id}/analyze` (LLM match analysis)
+- `POST /interviews/{interview_id}/start` (start candidate interview)
+- `GET /interviews/{interview_id}/messages` (ordered transcript)
 - Multi-provider LLM factory (`mock`, `openai`, `gemini`, `deepseek`)
 - Clean HTTP 503 error handling for LLM provider failures (e.g. DeepSeek insufficient balance)
+- Strict LLM JSON validation for match analysis and generated first question
 
 ## Run locally
 
@@ -40,8 +43,13 @@ Before calling interview endpoints, fill `.env` with:
 ```env
 SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
+LLM_PROVIDER=mock
 OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-4o-mini
+GOOGLE_API_KEY=...
+GOOGLE_MODEL=gemini-2.0-flash
+DEEPSEEK_API_KEY=...
+DEEPSEEK_MODEL=deepseek-chat
 ```
 
 ## Supabase setup (Step 3)
@@ -133,8 +141,21 @@ Run match analysis:
 curl -X POST http://localhost:8000/interviews/<interview_id>/analyze
 ```
 
+Start interview:
+
+```bash
+curl -X POST http://localhost:8000/interviews/<interview_id>/start
+```
+
+Get interview messages:
+
+```bash
+curl http://localhost:8000/interviews/<interview_id>/messages
+```
+
 Notes:
 
 - Upload endpoint normalizes filename to `snake_case` before saving.
 - Upload endpoint replaces previous documents of the same type (effectively an upsert).
 - LLM Provider is controlled by `LLM_PROVIDER` in `.env` (options: `mock`, `openai`, `gemini`, `deepseek`).
+- Invalid first-question JSON from any provider returns `503` with `LLM returned invalid question JSON.`

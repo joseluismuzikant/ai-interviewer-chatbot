@@ -1,5 +1,5 @@
 from app.providers.base import LLMProvider
-from app.schemas import MatchAnalysis
+from app.schemas import InterviewQuestion, MatchAnalysis
 
 
 class MockProvider(LLMProvider):
@@ -43,3 +43,21 @@ class MockProvider(LLMProvider):
             ],
         }
         return MatchAnalysis.model_validate(analysis).model_dump()
+
+    def generate_question(self, context: dict) -> dict:
+        question = {
+            "question": (
+                "Can you describe how you would design a scalable REST API "
+                "for a financial services application?"
+            ),
+            "topic": "Backend API design",
+            "difficulty": 5,
+            "expected_signals": [
+                "API resource design",
+                "validation and error handling",
+                "security considerations",
+                "database transaction boundaries",
+                "observability",
+            ],
+        }
+        return InterviewQuestion.model_validate(question).model_dump()

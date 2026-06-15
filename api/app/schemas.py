@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
+from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, StrictStr
 
 
 class HealthResponse(BaseModel):
@@ -51,6 +51,34 @@ class MatchAnalysis(BaseModel):
     potential_gaps: list[PotentialGap]
 
 
+class InterviewQuestion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    question: StrictStr
+    topic: StrictStr
+    difficulty: StrictInt | StrictFloat
+    expected_signals: list[StrictStr]
+
+
+class StartedQuestion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID | None = None
+    content: StrictStr
+    topic: StrictStr
+    difficulty: float
+    question_number: int
+    expected_signals: list[StrictStr]
+
+
+class InterviewStartResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    interview_id: UUID
+    status: Literal["IN_PROGRESS"]
+    question: StartedQuestion
+
+
 class DocumentUploadResponse(BaseModel):
     interview_id: UUID
     document_type: Literal["resume", "role_description"]
@@ -84,3 +112,16 @@ class DocumentDeleteResponse(BaseModel):
     interview_id: UUID
     filename: str
     deleted: bool
+
+
+class MessageResponse(BaseModel):
+    id: UUID
+    interview_id: UUID
+    role: Literal["assistant", "candidate", "system"]
+    content: str
+    question_number: int | None = None
+    difficulty_level: float | None = None
+    answer_quality_score: float | None = None
+    response_time_ms: int | None = None
+    paste_detected: bool | None = None
+    created_at: datetime | None = None

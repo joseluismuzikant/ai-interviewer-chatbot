@@ -15,6 +15,8 @@ This directory contains the MVP frontend for the AI Interviewer Chatbot.
 - Upload status feedback with extracted character count + UI refresh on upload
 - Friendlier error messages from backend `detail`
 - Match Analysis section rendering structured LLM JSON output (`role_summary`, `candidate_summary`, `focus_areas`, `potential_gaps`)
+- Candidate interview start flow with status-aware UI
+- Candidate page validation for missing/invalid interview ids
 
 ## Run locally
 
@@ -29,7 +31,9 @@ The app will run on Vite's default local URL (usually `http://localhost:5173`).
 ## Routes
 
 - `/admin`
+- `/admin/interviews`
 - `/admin/interviews/:id`
+- `/interview`
 - `/interview/:id`
 
 ## Admin flow (Step 4)
@@ -63,3 +67,16 @@ The app will run on Vite's default local URL (usually `http://localhost:5173`).
 Backend requirements:
 - Supabase Storage bucket `interview-documents` must exist.
 - `LLM_PROVIDER` must be valid (e.g. `mock` or valid credentials for `openai`, `gemini`, `deepseek`).
+
+## Candidate start flow (Step 7)
+
+1. Open `/interview/:id` with a real interview UUID.
+2. Page loads interview status from `GET /interviews/{id}`.
+3. If status is `READY`, click **Start Interview**.
+4. Frontend calls `POST /interviews/{id}/start`.
+5. On success, first question is displayed:
+   - question content
+   - topic
+   - difficulty
+   - expected signals
+6. If status is `IN_PROGRESS`, page attempts to display latest assistant question.

@@ -53,15 +53,20 @@ Implemented now:
   - `DELETE /interviews/{interview_id}/documents/{filename}`
 - LLM Match analysis endpoint:
   - `POST /interviews/{interview_id}/analyze`
+- Interview start endpoints:
+  - `POST /interviews/{interview_id}/start`
+  - `GET /interviews/{interview_id}/messages`
 - Frontend upload UI for resume and role description PDFs with upload status
 - Frontend interview-title dropdown on interview details page
 - Upload errors surfaced with backend-friendly messages
 - Frontend analysis button rendering structured match JSON output
+- Candidate page start-interview flow (READY -> IN_PROGRESS)
+- Candidate page guard for missing/invalid interview IDs
 
 Not implemented yet (planned):
 
-- Interview loop (start, answer, next-question)
-- Scoring + difficulty adaptation
+- Answer submission endpoint and candidate reply persistence
+- Answer scoring + adaptive difficulty updates
 - Final report generation
 - Docker setup for local orchestration
 
@@ -71,7 +76,7 @@ Not implemented yet (planned):
 flowchart LR
   subgraph Client["Client Apps"]
     A["Admin UI<br/>React + TypeScript + Vite"]
-    C["Candidate UI<br/>React + TypeScript + Vite<br/>(planned interview flow)"]
+    C["Candidate UI<br/>React + TypeScript + Vite"]
   end
 
   subgraph Backend["Backend API"]
@@ -79,6 +84,7 @@ flowchart LR
     I["Interview Service"]
     DOC["Document Service<br/>PDF upload + PyMuPDF extraction"]
     AN["Analysis Service<br/>Match analysis"]
+    STS["Interview Start Service<br/>First question generation"]
     LLM["LLM Provider Layer"]
   end
 
@@ -100,6 +106,7 @@ flowchart LR
   B --> I
   B --> DOC
   B --> AN
+  B --> STS
 
   DOC -->|"store original PDF"| ST
   DOC -->|"store metadata + extracted_text"| DB
@@ -107,12 +114,15 @@ flowchart LR
   I --> DB
   AN -->|"read resume + role_description extracted_text"| DB
   AN --> LLM
+  STS -->|"read match_analysis_json + status"| DB
+  STS --> LLM
   LLM --> M
   LLM --> O
   LLM --> G
   LLM --> D
 
   AN -->|"persist match_analysis_json<br/>status = READY"| DB
+  STS -->|"insert assistant message<br/>set status = IN_PROGRESS"| DB
 ```
 
 ## Repository Layout
@@ -133,6 +143,7 @@ ai-interviewer-chatbot/
 │       ├── interview_service.py
 │       ├── document_service.py
 │       ├── analysis_service.py
+│       ├── interview_start_service.py
 │       └── providers/
 │           ├── base.py
 │           ├── mock.py
@@ -197,6 +208,85 @@ npm run dev
 
 Frontend typically runs at: `http://localhost:5173`
 
+## Quick Smoke Test (Steps 1-7)
+
+Use this checklist to verify the MVP flow up to interview start (before Step 8 answer submission).
+
+1. Create interview:
+
+```bash
+curl -s -X POST http://localhost:8000/interviews \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Smoke Test Interview","target_questions":8,"starting_difficulty":5}'
+```
+
+Copy the returned `id` as `INTERVIEW_ID`.
+
+2. Upload resume + role description PDFs:
+
+```bash
+curl -s -X POST http://localhost:8000/interviews/INTERVIEW_ID/documents \
+  -F "document_type=resume" \
+  -F "file=@/absolute/path/to/resume.pdf;type=application/pdf"
+
+curl -s -X POST http://localhost:8000/interviews/INTERVIEW_ID/documents \
+  -F "document_type=role_description" \
+  -F "file=@/absolute/path/to/role_description.pdf;type=application/pdf"
+```
+
+3. Verify uploaded metadata:
+
+```bash
+curl -s http://localhost:8000/interviews/INTERVIEW_ID/documents
+```
+
+Expected: one `resume` and one `role_description` entry with `filename` and `extracted_character_count`.
+
+4. Run match analysis:
+
+```bash
+curl -s -X POST http://localhost:8000/interviews/INTERVIEW_ID/analyze
+```
+
+Expected: strict JSON (`role_summary`, `candidate_summary`, `focus_areas`, `potential_gaps`).
+
+5. Confirm interview is READY:
+
+```bash
+curl -s http://localhost:8000/interviews/INTERVIEW_ID
+```
+
+Expected: `status` is `READY` and `match_analysis_json` is populated.
+
+6. Start interview (Step 7):
+
+```bash
+curl -s -X POST http://localhost:8000/interviews/INTERVIEW_ID/start
+```
+
+Expected: `status` is `IN_PROGRESS` and response includes first question with:
+- `content`
+- `topic`
+- `difficulty`
+- `question_number=1`
+- `expected_signals`
+
+7. Verify transcript messages:
+
+```bash
+curl -s http://localhost:8000/interviews/INTERVIEW_ID/messages
+```
+
+Expected: at least one `assistant` message with `question_number=1`.
+
+Frontend smoke flow:
+
+1. Open `/admin`, create interview, and go to interview details.
+2. Upload resume and role description.
+3. Click **Run Match Analysis**.
+4. Open **Open Candidate Interview View**.
+5. Click **Start Interview** and verify first question is displayed.
+
 ## Environment Variables
 
 ### API (`api/.env`)
@@ -235,11 +325,15 @@ Based on `frontend/.env.example`:
 - `GET /interviews/{interview_id}/documentsFromStorage` -> lists documents from Supabase Storage
 - `DELETE /interviews/{interview_id}/documents/{filename}` -> deletes document from Storage + DB
 - `POST /interviews/{interview_id}/analyze` -> triggers LLM match analysis and returns structured JSON
+- `POST /interviews/{interview_id}/start` -> starts interview and returns first question
+- `GET /interviews/{interview_id}/messages` -> returns interview transcript ordered by `created_at`
 
 ### Frontend
 
 - `/admin`
+- `/admin/interviews`
 - `/admin/interviews/:id`
+- `/interview`
 - `/interview/:id`
 
 ## Product Workflow (Blueprint-Aligned)
@@ -272,9 +366,10 @@ The implementation roadmap is defined in `AGENTS.md` (Steps 1-11).
 
 ## Next Milestones
 
-1. Interview start + answer scoring loop
-2. Final report generation
-3. Dockerize API + frontend for local runs
+1. Answer submission + scoring endpoint (`POST /interviews/{id}/answer`)
+2. Adaptive difficulty progression
+3. Final report generation
+4. Dockerize API + frontend for local runs
 
 ## Current document behavior
 
@@ -291,3 +386,9 @@ The backend supports multiple LLM providers. Configure them in `api/.env`:
 - **openai**: Requires `OPENAI_API_KEY`, uses `OPENAI_MODEL` (default: `gpt-4o-mini`).
 - **gemini**: Requires `GOOGLE_API_KEY`, uses `GOOGLE_MODEL` (default: `gemini-2.0-flash`).
 - **deepseek**: Requires `DEEPSEEK_API_KEY`, uses `DEEPSEEK_MODEL` (default: `deepseek-chat`).
+
+## Current interview-start behavior
+
+- `POST /interviews/{id}/start` only starts interviews in `READY` or returns latest assistant question for `IN_PROGRESS`.
+- First question is generated from `match_analysis_json.focus_areas` via the selected LLM provider.
+- Invalid generated question JSON returns `503` with `LLM returned invalid question JSON.`

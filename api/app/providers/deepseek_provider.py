@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from app.config import Settings
 from app.providers.base import LLMProvider
-from app.schemas import MatchAnalysis
+from app.schemas import InterviewQuestion, MatchAnalysis
 
 
 class DeepSeekProvider(LLMProvider):
@@ -79,5 +79,57 @@ class DeepSeekProvider(LLMProvider):
             validated = MatchAnalysis.model_validate(result)
         except ValidationError as exc:
             raise RuntimeError("LLM returned invalid match analysis JSON.") from exc
+
+        return validated.model_dump()
+
+    def generate_question(self, context: dict) -> dict:
+        system_prompt = (
+            "You are an AI technical interviewer. Generate the first interview "
+            "question from the provided focus areas and difficulty."
+        )
+        user_prompt = (
+            f"Context JSON:\n{json.dumps(context)}\n\n"
+            "Return ONLY valid JSON with this exact structure:\n"
+            '{"question":"string","topic":"string","difficulty":5,'
+            '"expected_signals":["string"]}'
+        )
+
+        try:
+            response = self._get_client().chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.3,
+            )
+        except APIStatusError as exc:
+            if exc.status_code == 402 or (
+                exc.message and "insufficient balance" in exc.message.lower()
+            ):
+                raise RuntimeError(
+                    "DeepSeek balance is insufficient. "
+                    "Add credits or switch LLM_PROVIDER=mock for local development."
+                ) from exc
+            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
+        except Exception as exc:
+            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
+
+        content = response.choices[0].message.content or "{}"
+        content = content.strip()
+        if content.startswith("```"):
+            content = content.strip("`")
+            if content.startswith("json"):
+                content = content[4:]
+
+        try:
+            result = json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("LLM returned invalid question JSON.") from exc
+
+        try:
+            validated = InterviewQuestion.model_validate(result)
+        except ValidationError as exc:
+            raise RuntimeError("LLM returned invalid question JSON.") from exc
 
         return validated.model_dump()

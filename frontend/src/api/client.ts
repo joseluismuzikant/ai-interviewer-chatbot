@@ -127,6 +127,34 @@ export type MatchAnalysis = {
   potential_gaps: AnalysisItem[];
 };
 
+export type StartQuestion = {
+  id?: string;
+  content: string;
+  topic: string;
+  difficulty: number;
+  question_number: number;
+  expected_signals: string[];
+};
+
+export type StartInterviewResponse = {
+  interview_id: string;
+  status: "IN_PROGRESS";
+  question: StartQuestion;
+};
+
+export type MessageResponse = {
+  id: string;
+  interview_id: string;
+  role: "assistant" | "candidate" | "system";
+  content: string;
+  question_number: number | null;
+  difficulty_level: number | null;
+  answer_quality_score: number | null;
+  response_time_ms: number | null;
+  paste_detected: boolean | null;
+  created_at: string | null;
+};
+
 export async function analyzeInterview(
   interviewId: string
 ): Promise<MatchAnalysis> {
@@ -142,6 +170,42 @@ export async function analyzeInterview(
   }
 
   return response.json() as Promise<MatchAnalysis>;
+}
+
+export async function getInterview(interviewId: string): Promise<InterviewResponse> {
+  const response = await fetch(`${API_URL}/interviews/${interviewId}`);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Fetch interview failed"));
+  }
+
+  return response.json() as Promise<InterviewResponse>;
+}
+
+export async function startInterview(
+  interviewId: string
+): Promise<StartInterviewResponse> {
+  const response = await fetch(`${API_URL}/interviews/${interviewId}/start`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Start interview failed"));
+  }
+
+  return response.json() as Promise<StartInterviewResponse>;
+}
+
+export async function getInterviewMessages(
+  interviewId: string
+): Promise<MessageResponse[]> {
+  const response = await fetch(`${API_URL}/interviews/${interviewId}/messages`);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Fetch messages failed"));
+  }
+
+  return response.json() as Promise<MessageResponse[]>;
 }
 
 export async function uploadInterviewDocument(

@@ -383,33 +383,178 @@ Requirements:
 5. Keep the implementation simple for the MVP.
 
 Do not change the overall architecture.
-Do not add authentication.
+Do not add authentication.+-9`+
+
 Do not start Step 7 yet.
 
 ---
 
 # Step 7 — Interview start
 
-Backend endpoint:
 
-```http
+Context:
+The project is an AI Interviewer Chatbot MVP.
+The current flow already works up to:
+- create interview
+- upload resume
+- upload role description
+- extract PDF text
+- store documents
+- analyze resume + role description with the configured LLM provider
+- store match_analysis_json
+- update interview status to READY
+
+Now I need the candidate interview start flow.
+
+Requirements:
+
+1. Add backend endpoint:
+
 POST /interviews/{interview_id}/start
-```
 
-Behavior:
+2. Backend behavior:
 
-- Only allow start if interview.status = READY
-- Validate interview has match analysis.
-- Set status to `IN_PROGRESS`.
-- Generate first question using focus areas.
-- Store assistant message in `messages`.
-- Return first question.
+- Load the interview by id.
+- Return 404 if the interview does not exist.
+- Only allow starting when interview.status = READY.
+- If interview.status = IN_PROGRESS, do not generate a duplicate first question.
+  Instead, return the latest assistant question for that interview.
+- Return 400 if the interview status is not READY or IN_PROGRESS.
+- Validate that match_analysis_json exists.
+- Validate that match_analysis_json has focus_areas.
+- Generate the first interview question using focus_areas from match_analysis_json.
+- Use interview.current_difficulty as the first question difficulty.
+- Use the existing LLM provider abstraction so it works with:
+  - mock
+  - openai
+  - gemini
+  - deepseek
 
-Frontend candidate page:
+3. Add LLM provider method:
 
-- Load interview.
-- Show Start Interview button.
-- Display first question.
+generate_question(context: dict) -> dict
+
+The context should include:
+- focus_areas
+- potential_gaps if available
+- current_difficulty
+- question_number = 1
+- previous_messages = empty list for Step 7
+
+4. The LLM response must be strict JSON:
+
+{
+  "question": "string",
+  "topic": "string",
+  "difficulty": 5,
+  "expected_signals": ["string"]
+}
+
+5. Add Pydantic schema validation for the generated question.
+
+If the provider returns invalid JSON or invalid schema, return HTTP 503 with this message:
+
+"LLM returned invalid question JSON."
+
+6. Add mock provider support.
+
+The mock provider should return a valid fixed first question like:
+
+{
+  "question": "Can you describe how you would design a scalable REST API for a financial services application?",
+  "topic": "Backend API design",
+  "difficulty": 5,
+  "expected_signals": [
+    "API resource design",
+    "validation and error handling",
+    "security considerations",
+    "database transaction boundaries",
+    "observability"
+  ]
+}
+
+7. Store the generated first question in the messages table as an assistant message:
+
+- interview_id = current interview id
+- role = assistant
+- content = generated question text
+- question_number = 1
+- difficulty_level = interview.current_difficulty
+- answer_quality_score = null
+- response_time_ms = null
+- paste_detected = false
+
+8. Update the interview row:
+
+- status = IN_PROGRESS
+- current_question_number = 1
+
+9. Return a response like:
+
+{
+  "interview_id": "uuid",
+  "status": "IN_PROGRESS",
+  "question": {
+    "id": "message uuid if available",
+    "content": "question text",
+    "topic": "Backend API design",
+    "difficulty": 5,
+    "question_number": 1,
+    "expected_signals": ["string"]
+  }
+}
+
+If returning the message id is difficult with the current Supabase insert, return everything else and keep id optional.
+
+10. Add API client method in the frontend:
+
+startInterview(interviewId)
+
+It should call:
+
+POST /interviews/{interview_id}/start
+
+11. Update the Candidate Interview page:
+
+- Load the interview by id from the URL.
+- Show interview status.
+- If status is READY, show a Start Interview button.
+- When Start Interview is clicked:
+  - call startInterview(interviewId)
+  - show loading state
+  - display any error clearly
+  - display the first question on success
+- If status is IN_PROGRESS, show the latest assistant question if it is available.
+- Display:
+  - question text
+  - topic
+  - difficulty
+  - expected signals
+
+12. Add or update a backend endpoint if needed to fetch messages for an interview.
+
+Preferred endpoint:
+
+GET /interviews/{interview_id}/messages
+
+It should return messages ordered by created_at ascending.
+
+13. Do not implement answer submission.
+14. Do not implement answer scoring.
+15. Do not implement adaptive difficulty yet.
+16. Do not implement final report yet.
+17. Do not add authentication.
+18. Do not change the existing architecture.
+19. Keep the implementation simple and MVP-focused.
+
+After finishing, tell me:
+
+- files changed
+- how to test with Postman
+- how to test from the frontend
+- expected request/response examples
+- any assumptions you made
+
 
 ---
 

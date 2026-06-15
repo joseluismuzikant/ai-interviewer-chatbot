@@ -45,3 +45,16 @@ class InterviewService:
     def delete_interview(self, interview_id: UUID) -> None:
         self.get_interview(interview_id)
         self.supabase.table("interviews").delete().eq("id", str(interview_id)).execute()
+
+    def list_messages(self, interview_id: UUID) -> list[dict]:
+        response = (
+            self.supabase.table("messages")
+            .select(
+                "id,interview_id,role,content,question_number,difficulty_level,"
+                "answer_quality_score,response_time_ms,paste_detected,created_at"
+            )
+            .eq("interview_id", str(interview_id))
+            .order("created_at", desc=False)
+            .execute()
+        )
+        return response.data or []

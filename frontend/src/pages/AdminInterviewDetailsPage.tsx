@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 
 import {
@@ -191,6 +192,11 @@ export function AdminInterviewDetailsPage() {
       {isLoadingInterviews ? <p>Loading interviews...</p> : null}
       {interviewsError ? <p className="form-error">{interviewsError}</p> : null}
       {selectedInterviewId ? <p>Selected Interview ID: {selectedInterviewId}</p> : null}
+      {selectedInterviewId ? (
+        <p>
+          <Link to={`/interview/${selectedInterviewId}`}>Open Candidate Interview View</Link>
+        </p>
+      ) : null}
 
       <div className="upload-grid">
         <form

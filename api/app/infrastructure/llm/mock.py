@@ -8,6 +8,9 @@ from app.schemas import (
 
 
 class MockProvider(LLMProvider):
+    def __init__(self, settings=None) -> None:
+        pass
+
     def analyze_match(
         self, resume_text: str, role_description_text: str
     ) -> dict:

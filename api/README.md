@@ -238,6 +238,36 @@ Dependency direction:
 - Use-case service classes live in `application/use_cases/`.
 - HTTP routing lives in `presentation/controllers/` as FastAPI `APIRouter` instances.
 
+## Tests (Step 13 — completed)
+
+Backend test suite using pytest + httpx:
+
+```bash
+cd api
+source .venv/bin/activate
+pip install -r requirements.txt  # includes pytest, pytest-mock, httpx
+pytest
+```
+
+Current coverage: **87 tests** across 8 test files:
+
+| Test file | Coverage |
+|---|---|
+| `tests/test_health.py` | GET /health |
+| `tests/test_interviews.py` | CRUD create/list/get/delete + 404 |
+| `tests/test_documents.py` | upload + list + replace + validation |
+| `tests/test_analysis.py` | match analysis + status + missing docs |
+| `tests/test_interview_start.py` | start gating + question + messages |
+| `tests/test_interview_answer.py` | scoring + difficulty + final gate |
+| `tests/test_report.py` | generate + get + gating |
+| `tests/test_schemas.py` | Pydantic model validation (all schemas) |
+
+The test suite uses:
+- `FakeSupabaseClient` + `FakeQuery` — in-memory store simulating Supabase tables, filters, inserts, upserts, updates, and deletes
+- `FakeStorageWrapper` + `FakeStorageBucket` — in-memory file store simulating Supabase Storage
+- `FastAPI.dependency_overrides` — injects fake Supabase into all services
+- `LLM_PROVIDER=mock` — MockProvider for LLM calls
+
 ## Upcoming backend steps (from AGENTS.md)
 
 - ~~Step 10: add `api/Dockerfile` for local containerization.~~ **Done**

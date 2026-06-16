@@ -1,5 +1,7 @@
 # Visual OpenCode Instructions — AI Interviewer Chatbot MVP
 
+**Status:** Steps 1-13 complete, Step 14 pending.
+
 Project path:
 
 ```bash
@@ -94,6 +96,28 @@ ai-interviewer-chatbot/
     - files changed;
     - commands to run;
     - how to test manually.
+
+---
+
+## Progress
+
+### Completed
+- Step 1: FastAPI skeleton with `/health` endpoint
+- Step 2: React + TypeScript + Vite frontend skeleton with routing
+- Step 3: Supabase database schema (`docs/supabase_schema.sql`) + `POST /interviews` / `GET /interviews/{id}`
+- Step 4: Admin create interview form (UI + API)
+- Step 5: Document upload (resume + role_description) with PDF text extraction, Supabase Storage, upsert semantics
+- Step 6: LLM match analysis with Mock/OpenAI/Gemini/DeepSeek providers, `POST /interviews/{id}/analyze`
+- Step 7: Interview start flow — status gating, first question generation via LLM, messages table storage, status → IN_PROGRESS
+- Step 8: Answer scoring, adaptive difficulty adjustment, next question generation, final question gate
+- Step 9: Final report generation (LLM + score heuristics), `POST/GET /interviews/{id}/report`, status → COMPLETED
+- Step 10: Dockerize locally (api/Dockerfile, frontend/Dockerfile, docker-compose.yml)
+- Step 11: Droplet deployment plan (documented)
+- Step 12: Onion Architecture backend refactor (domain/application/infrastructure/presentation layers, 40 files, no behavior change)
+- Step 13: Automated backend tests — 87 tests across 8 test files, FakeSupabaseClient + FakeQuery in-memory store, FastAPI dependency_overrides, MockProvider for LLM
+
+### Next
+- Step 14: LangGraph orchestration
 
 ---
 
@@ -745,7 +769,36 @@ uvicorn app.main:app --reload
 
 ---
 
-# Step 13 — Introduce LangGraph orchestration
+# Step 13 — Add automated tests (backend)
+
+Goal:
+Add baseline automated test coverage for MVP-critical flows.
+
+Requirements:
+
+1. Add test framework setup (pytest + httpx).
+2. Add `FakeSupabaseClient` + `FakeQuery` with in-memory store for DB mocking.
+3. Add tests for key API/service behaviors:
+   - health endpoint (`GET /health`)
+   - interview CRUD (create, list, get, delete)
+   - document upload + list
+   - match analysis
+   - interview start status gating
+   - answer flow scores + transitions + difficulty adjustment
+   - report generation gating and shape
+   - Pydantic schema validation
+4. Mock LLM dependencies via `MockProvider` (`LLM_PROVIDER=mock`).
+5. Use FastAPI `dependency_overrides` to inject `FakeSupabaseClient`.
+
+Validation commands:
+
+```bash
+cd api && pytest
+```
+
+---
+
+# Step 14 — Introduce LangGraph orchestration
 
 Goal:
 Use LangGraph to coordinate interview agents/workflow steps in a controlled graph.
@@ -767,7 +820,7 @@ Do not over-engineer state handling in this step.
 
 ---
 
-# Step 14 — Add LangChain monitoring/observability
+# Step 15 — Add LangChain monitoring/observability
 
 Goal:
 Use LangChain tooling to monitor agent runs and make debugging easier.
@@ -785,43 +838,6 @@ Requirements:
 5. Document configuration in `api/.env.example` and `api/README.md`.
 
 Do not change endpoint contracts in this step.
-
----
-
-# Step 15 — Add automated tests (backend and frontend)
-
-Goal:
-Add baseline automated test coverage for MVP-critical flows.
-
-Requirements:
-
-Backend:
-
-1. Add a Python test framework setup (pytest).
-2. Add tests for key API/service behaviors:
-   - health endpoint
-   - create/get interview
-   - start interview status gating
-   - answer flow status transitions
-   - report generation gating and shape
-3. Mock LLM/provider dependencies in tests.
-
-Frontend:
-
-1. Add test setup for React (Vitest + Testing Library).
-2. Add tests for key page behavior:
-   - admin create form submit state
-   - interview details section rendering
-   - candidate page status/progress rendering
-   - report section rendering when data exists
-3. Keep tests small and deterministic.
-
-Validation commands:
-
-```bash
-cd api && pytest
-cd frontend && npm run test
-```
 
 ---
 

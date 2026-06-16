@@ -25,6 +25,8 @@ The intended end-to-end flow is:
 
 This MVP emphasizes deterministic orchestration around LLM calls, structured JSON outputs, and persistence of interview transcripts and scoring metadata.
 
+- **Test status:** `cd api && pytest` → 87/87 passed (backend), 39 modules build cleanly
+
 ## Current Status
 
 Implemented now:
@@ -80,13 +82,12 @@ Implemented now:
 - Refined frontend UI/UX with reusable page/card/badge/alert components and responsive layout
 - Docker support for local development (`docker compose up --build`)
 - Backend refactored to Onion Architecture with clear separation of concerns
+- Automated backend tests: 87 tests across 8 test files, FakeSupabaseClient in-memory store, FastAPI dependency_overrides, MockProvider for LLM
 
 Not implemented yet (planned):
 
-- Step 11: Droplet deployment preparation plan
-- Step 13: LangGraph orchestration layer
-- Step 14: LangChain monitoring/observability
-- Step 15: Automated tests (backend + frontend)
+- Step 14: LangGraph orchestration layer
+- Step 15: LangChain monitoring/observability
 - Step 16: CI pipelines for test + Docker image builds
 
 ## Architecture (MVP)
@@ -505,10 +506,9 @@ Completed:
 Planned:
 
 1. Step 11: Prepare droplet deployment approach (no deploy yet)
-2. Step 13: Introduce LangGraph orchestration for interview workflow nodes
-4. Step 14: Add LangChain monitoring/observability hooks
-5. Step 15: Add automated tests for backend and frontend
-6. Step 16: Add CI pipelines to run tests and build Docker images
+2. Step 14: Introduce LangGraph orchestration for interview workflow nodes
+3. Step 15: Add LangChain monitoring/observability hooks
+4. Step 16: Add CI pipelines to run tests and build Docker images
 
 ## Current document behavior
 

@@ -210,7 +210,7 @@ Notes:
 
 ## Upcoming backend steps (from AGENTS.md)
 
-- Step 10: add `api/Dockerfile` for local containerization.
+- ~~Step 10: add `api/Dockerfile` for local containerization.~~ **Done**
 - Step 12: refactor backend structure so each service and each provider/agent has a clearer dedicated folder.
 - Step 13: introduce LangGraph for orchestration of analysis/question/evaluation/report nodes.
 - Step 14: add LangChain monitoring/observability hooks around LLM operations.

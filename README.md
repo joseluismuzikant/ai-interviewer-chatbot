@@ -78,10 +78,10 @@ Implemented now:
 - Admin UI report generation and report display (summary, score, strengths, weaknesses, integrity notes, recommendation)
 - Admin transcript shown as chat-style message thread
 - Refined frontend UI/UX with reusable page/card/badge/alert components and responsive layout
+- Docker support for local development (`docker compose up --build`)
 
 Not implemented yet (planned):
 
-- Step 10: Docker setup for local orchestration
 - Step 11: Droplet deployment preparation plan
 - Step 12: Backend folder refactor (services + agents/providers)
 - Step 13: LangGraph orchestration layer
@@ -199,13 +199,16 @@ ai-interviewer-chatbot/
 
 ## Prerequisites
 
-- Python 3.10+
+- Python 3.12+
 - Node.js 18+
 - npm 9+
+- Docker & Docker Compose (for Option B)
 
 ## Quick Start (Local)
 
-### 1) Start the API
+### Option A — Run directly
+
+#### 1) Start the API
 
 ```bash
 cd api
@@ -230,7 +233,7 @@ Expected response:
 {"status":"ok"}
 ```
 
-### 2) Start the Frontend
+#### 2) Start the Frontend
 
 Open a second terminal:
 
@@ -242,6 +245,25 @@ npm run dev
 ```
 
 Frontend typically runs at: `http://localhost:5173`
+
+### Option B — Run with Docker (Step 10)
+
+```bash
+docker compose up --build
+```
+
+| Service   | URL                          |
+|-----------|------------------------------|
+| API       | `http://localhost:8000`      |
+| Frontend  | `http://localhost:3000`      |
+
+Before starting, ensure `api/.env` and `frontend/.env` exist on the host. They are mounted as read-only volumes at runtime — no secrets are baked into the image. The default `LLM_PROVIDER=mock` works without API keys.
+
+Health check:
+
+```bash
+curl http://localhost:8000/health
+```
 
 ## Quick Smoke Test (Steps 1-9)
 
@@ -448,13 +470,18 @@ The implementation roadmap is defined in `AGENTS.md` (Steps 1-16).
 
 ## Next Milestones
 
-1. Step 10: Dockerize API + frontend for local runs (`api/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`)
-2. Step 11: Prepare droplet deployment approach (no deploy yet)
-3. Step 12: Refactor backend folders by service and provider/agent responsibility
-4. Step 13: Introduce LangGraph orchestration for interview workflow nodes
-5. Step 14: Add LangChain monitoring/observability hooks
-6. Step 15: Add automated tests for backend and frontend
-7. Step 16: Add CI pipelines to run tests and build Docker images
+Completed:
+
+- Step 10: Dockerize API + frontend for local runs (`docker compose up --build`)
+
+Planned:
+
+1. Step 11: Prepare droplet deployment approach (no deploy yet)
+2. Step 12: Refactor backend folders by service and provider/agent responsibility
+3. Step 13: Introduce LangGraph orchestration for interview workflow nodes
+4. Step 14: Add LangChain monitoring/observability hooks
+5. Step 15: Add automated tests for backend and frontend
+6. Step 16: Add CI pipelines to run tests and build Docker images
 
 ## Current document behavior
 

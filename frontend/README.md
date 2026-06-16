@@ -114,6 +114,6 @@ Not displayed to candidate (intentional for MVP):
 
 ## Upcoming frontend steps (from AGENTS.md)
 
-- Step 10: add `frontend/Dockerfile` for local containerized runs.
+- ~~Step 10: add `frontend/Dockerfile` for local containerized runs.~~ **Done**
 - Step 15: add automated frontend tests using Vitest + Testing Library.
 - Step 16: add CI workflows to run frontend tests and build frontend Docker images.

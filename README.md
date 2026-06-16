@@ -436,6 +436,16 @@ The implementation roadmap is defined in `AGENTS.md` (Steps 1-16).
 - Frontend notes: `frontend/README.md`
 - Step-by-step implementation plan: `AGENTS.md`
 
+## Screens
+
+### Admin / Interview Details
+
+![Admin and Interview Details UI](docs/screens/front-1.png)
+
+### Candidate Interview
+
+![Candidate Interview UI](docs/screens/front-2.png)
+
 ## Next Milestones
 
 1. Step 10: Dockerize API + frontend for local runs (`api/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`)

@@ -33,6 +33,8 @@ export type InterviewResponse = {
   target_questions: number;
   current_question_number: number;
   current_difficulty: number;
+  match_analysis_json?: MatchAnalysis | null;
+  report_json?: FinalReportResponse | null;
 };
 
 export type DocumentType = "resume" | "role_description";
@@ -162,6 +164,16 @@ export type SubmitAnswerResponse = {
   next_question: StartQuestion | null;
 };
 
+export type FinalReportResponse = {
+  summary: string;
+  overall_score: number;
+  strengths: string[];
+  weaknesses: string[];
+  integrity_notes: string[];
+  recommendation: "YES" | "MIXED" | "NO";
+  recommendation_rationale: string;
+};
+
 export type MessageResponse = {
   id: string;
   interview_id: string;
@@ -245,6 +257,32 @@ export async function submitAnswer(
   }
 
   return response.json() as Promise<SubmitAnswerResponse>;
+}
+
+export async function generateReport(
+  interviewId: string
+): Promise<FinalReportResponse> {
+  const response = await fetch(`${API_URL}/interviews/${interviewId}/report`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Generate report failed"));
+  }
+
+  return response.json() as Promise<FinalReportResponse>;
+}
+
+export async function getReport(
+  interviewId: string
+): Promise<FinalReportResponse> {
+  const response = await fetch(`${API_URL}/interviews/${interviewId}/report`);
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Fetch report failed"));
+  }
+
+  return response.json() as Promise<FinalReportResponse>;
 }
 
 export async function uploadInterviewDocument(

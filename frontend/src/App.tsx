@@ -1,4 +1,4 @@
-import { Link, Navigate, Route, Routes } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 
 import { AdminPage } from "./pages/AdminPage";
 import { AdminInterviewDetailsPage } from "./pages/AdminInterviewDetailsPage";
@@ -8,10 +8,23 @@ function App() {
   return (
     <div className="app-shell">
       <header className="top-nav">
-        <h1>AI Interviewer Chatbot</h1>
-        <nav>
-          <Link to="/admin">Admin</Link>
-          <Link to="/admin/interviews">Interview Details</Link>
+        <div className="top-nav-brand">
+          <p className="top-nav-kicker">MVP Demo</p>
+          <h1>AI Interviewer Chatbot</h1>
+        </div>
+        <nav className="top-nav-links">
+          <NavLink
+            to="/admin"
+            className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+          >
+            Admin
+          </NavLink>
+          <NavLink
+            to="/admin/interviews"
+            className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+          >
+            Interview Details
+          </NavLink>
         </nav>
       </header>
 

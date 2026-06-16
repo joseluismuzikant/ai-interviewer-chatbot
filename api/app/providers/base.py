@@ -15,3 +15,7 @@ class LLMProvider(ABC):
     @abstractmethod
     def evaluate_answer(self, context: dict) -> dict:
         ...
+
+    @abstractmethod
+    def generate_report(self, context: dict) -> dict:
+        ...

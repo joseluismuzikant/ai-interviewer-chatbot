@@ -25,9 +25,11 @@ This directory contains the backend API for the AI Interviewer Chatbot MVP.
 - `POST /interviews/{interview_id}/start` (start candidate interview)
 - `POST /interviews/{interview_id}/answer` (score answer + generate next question)
 - `GET /interviews/{interview_id}/messages` (ordered transcript)
+- `POST /interviews/{interview_id}/report` (generate and persist final report)
+- `GET /interviews/{interview_id}/report` (fetch persisted final report)
 - Multi-provider LLM factory (`mock`, `openai`, `gemini`, `deepseek`)
 - Clean HTTP 503 error handling for LLM provider failures (e.g. DeepSeek insufficient balance)
-- Strict LLM JSON validation for match analysis, generated questions, and answer evaluation
+- Strict LLM JSON validation for match analysis, generated questions, answer evaluation, and final report fields
 
 ## Run locally
 
@@ -162,6 +164,41 @@ curl -X POST http://localhost:8000/interviews/<interview_id>/answer \
   -d '{"answer":"I would design clear resource-oriented endpoints with strong validation and observability.","response_time_ms":45000,"paste_detected":false}'
 ```
 
+Generate final report:
+
+```bash
+curl -X POST http://localhost:8000/interviews/<interview_id>/report
+```
+
+Get final report:
+
+```bash
+curl http://localhost:8000/interviews/<interview_id>/report
+```
+
+Example final report response shape:
+
+```json
+{
+  "summary": "string",
+  "overall_score": 7.2,
+  "strengths": ["string"],
+  "weaknesses": ["string"],
+  "integrity_notes": ["string"],
+  "recommendation": "YES",
+  "recommendation_rationale": "string"
+}
+```
+
+## Step 9 report behavior
+
+- Report generation requires interview status `COMPLETED`.
+- `overall_score` is calculated in application code (average of candidate `answer_quality_score`, rounded to 1 decimal).
+- `integrity_notes` are calculated in application code from `paste_detected` and response-time-vs-length heuristics.
+- LLM generates only summary/recommendation content fields via `generate_report(context)`.
+- Report is persisted into `interviews.report_json`.
+- `GET /report` returns persisted report or `404` if none exists yet.
+
 Notes:
 
 - Upload endpoint normalizes filename to `snake_case` before saving.
@@ -169,3 +206,13 @@ Notes:
 - LLM Provider is controlled by `LLM_PROVIDER` in `.env` (options: `mock`, `openai`, `gemini`, `deepseek`).
 - Invalid first-question JSON from any provider returns `503` with `LLM returned invalid question JSON.`
 - Invalid answer-evaluation JSON from any provider returns `503` with `LLM returned invalid answer evaluation JSON.`
+- Invalid final-report JSON from any provider returns `503` with `LLM returned invalid report JSON.`
+
+## Upcoming backend steps (from AGENTS.md)
+
+- Step 10: add `api/Dockerfile` for local containerization.
+- Step 12: refactor backend structure so each service and each provider/agent has a clearer dedicated folder.
+- Step 13: introduce LangGraph for orchestration of analysis/question/evaluation/report nodes.
+- Step 14: add LangChain monitoring/observability hooks around LLM operations.
+- Step 15: add pytest-based automated tests for MVP-critical backend flows.
+- Step 16: add CI workflows to run backend tests and build Docker images.

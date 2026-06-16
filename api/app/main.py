@@ -12,6 +12,7 @@ from app.interview_answer_service import InterviewAnswerService
 from app.interview_start_service import InterviewStartService
 from app.interview_service import InterviewService
 from app.llm import get_llm_client
+from app.report_service import ReportService
 from app.schemas import (
     AnswerRequest,
     DocumentDeleteResponse,
@@ -19,6 +20,7 @@ from app.schemas import (
     DocumentRecord,
     DocumentStorageListResponse,
     DocumentUploadResponse,
+    FinalReportResponse,
     HealthResponse,
     InterviewAnswerResponse,
     InterviewCreateRequest,
@@ -96,6 +98,14 @@ def get_interview_start_service() -> InterviewStartService:
 @lru_cache
 def get_interview_answer_service() -> InterviewAnswerService:
     return InterviewAnswerService(
+        supabase=get_cached_supabase_client(),
+        llm=get_cached_llm_client(),
+    )
+
+
+@lru_cache
+def get_report_service() -> ReportService:
+    return ReportService(
         supabase=get_cached_supabase_client(),
         llm=get_cached_llm_client(),
     )
@@ -253,3 +263,29 @@ def submit_answer(
 ) -> InterviewAnswerResponse:
     interview = interview_service.get_interview(interview_id)
     return interview_answer_service.submit_answer(interview, payload)
+
+
+@app.post(
+    "/interviews/{interview_id}/report",
+    response_model=FinalReportResponse,
+)
+def generate_interview_report(
+    interview_id: UUID,
+    interview_service: InterviewService = Depends(get_interview_service),
+    report_service: ReportService = Depends(get_report_service),
+) -> FinalReportResponse:
+    interview = interview_service.get_interview(interview_id)
+    return report_service.generate_report(interview)
+
+
+@app.get(
+    "/interviews/{interview_id}/report",
+    response_model=FinalReportResponse,
+)
+def get_interview_report(
+    interview_id: UUID,
+    interview_service: InterviewService = Depends(get_interview_service),
+    report_service: ReportService = Depends(get_report_service),
+) -> FinalReportResponse:
+    interview = interview_service.get_interview(interview_id)
+    return report_service.get_report(interview)

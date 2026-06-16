@@ -40,7 +40,7 @@ Implemented now:
   - `GET /interviews/{interview_id}`
   - `DELETE /interviews/{interview_id}`
 - Supabase schema SQL file: `docs/supabase_schema.sql`
-- Frontend skeleton with route structure and placeholder pages
+- Frontend routes and polished MVP UI for admin and candidate flows
 - Frontend API client configured via `VITE_API_URL`
 - Admin create-interview form (title, target questions, starting difficulty)
 - Redirect from `/admin` to `/admin/interviews/:id` after successful creation
@@ -70,11 +70,24 @@ Implemented now:
 - Interview completion transition when target count is reached
 - Candidate UI question-answer loop with loading/error handling and progress (`Question X of Y`)
 - Candidate UI intentionally hides internal evaluation details and expected signals
+- Final report endpoints:
+  - `POST /interviews/{interview_id}/report`
+  - `GET /interviews/{interview_id}/report`
+- Report generation from transcript + match analysis with strict LLM JSON validation
+- Application-calculated `overall_score` and integrity notes persisted in `interviews.report_json`
+- Admin UI report generation and report display (summary, score, strengths, weaknesses, integrity notes, recommendation)
+- Admin transcript shown as chat-style message thread
+- Refined frontend UI/UX with reusable page/card/badge/alert components and responsive layout
 
 Not implemented yet (planned):
 
-- Final report generation
-- Docker setup for local orchestration
+- Step 10: Docker setup for local orchestration
+- Step 11: Droplet deployment preparation plan
+- Step 12: Backend folder refactor (services + agents/providers)
+- Step 13: LangGraph orchestration layer
+- Step 14: LangChain monitoring/observability
+- Step 15: Automated tests (backend + frontend)
+- Step 16: CI pipelines for test + Docker image builds
 
 ## Architecture (MVP)
 
@@ -92,6 +105,7 @@ flowchart LR
     AN["Analysis Service<br/>Match analysis"]
     STS["Interview Start Service<br/>First question generation"]
     AS["Interview Answer Service<br/>Score answer + next question"]
+    RS["Report Service<br/>Final report generation"]
     LLM["LLM Provider Layer"]
   end
 
@@ -115,6 +129,7 @@ flowchart LR
   B --> AN
   B --> STS
   B --> AS
+  B --> RS
 
   DOC -->|"store original PDF"| ST
   DOC -->|"store metadata + extracted_text"| DB
@@ -126,6 +141,8 @@ flowchart LR
   STS --> LLM
   AS -->|"store candidate answer + score<br/>update difficulty + question number"| DB
   AS --> LLM
+  RS -->|"read transcript + interview metadata"| DB
+  RS --> LLM
   LLM --> M
   LLM --> O
   LLM --> G
@@ -134,6 +151,7 @@ flowchart LR
   AN -->|"persist match_analysis_json<br/>status = READY"| DB
   STS -->|"insert assistant message<br/>set status = IN_PROGRESS"| DB
   AS -->|"insert candidate + assistant messages<br/>status IN_PROGRESS/COMPLETED"| DB
+  RS -->|"persist report_json"| DB
 ```
 
 ## Repository Layout
@@ -156,6 +174,7 @@ ai-interviewer-chatbot/
 │       ├── analysis_service.py
 │       ├── interview_start_service.py
 │       ├── interview_answer_service.py
+│       ├── report_service.py
 │       ├── question_meta_store.py
 │       └── providers/
 │           ├── base.py
@@ -169,8 +188,10 @@ ai-interviewer-chatbot/
 │   ├── .env.example
 │   └── src/
 │       ├── App.tsx
+│       ├── components/ui.tsx
 │       ├── api/client.ts
-│       └── pages/
+│       ├── pages/
+│       └── styles.css
 └── docs/
     ├── AI-Interview-Chatbot-Blueprint 2.pdf
     └── supabase_schema.sql
@@ -222,16 +243,16 @@ npm run dev
 
 Frontend typically runs at: `http://localhost:5173`
 
-## Quick Smoke Test (Steps 1-8)
+## Quick Smoke Test (Steps 1-9)
 
-Use this checklist to verify the MVP flow through answer submission and next-question generation.
+Use this checklist to verify the MVP flow through final report generation.
 
 1. Create interview:
 
 ```bash
 curl -s -X POST http://localhost:8000/interviews \
   -H "Content-Type: application/json" \
-  -d '{"title":"Smoke Test Interview","target_questions":8,"starting_difficulty":5}'
+  -d '{"title":"Smoke Test Interview","target_questions":1,"starting_difficulty":5}'
 ```
 
 Copy the returned `id` as `INTERVIEW_ID`.
@@ -305,6 +326,25 @@ Expected:
 - If there are remaining questions: `status` is `IN_PROGRESS` and `next_question` is populated.
 - If target is reached: `status` is `COMPLETED` and `next_question` is `null`.
 
+Note: this smoke test uses `target_questions=1`, so the first answer should complete the interview.
+
+9. Generate and fetch final report (Step 9):
+
+```bash
+curl -s -X POST http://localhost:8000/interviews/INTERVIEW_ID/report
+
+curl -s http://localhost:8000/interviews/INTERVIEW_ID/report
+```
+
+Expected report fields:
+- `summary`
+- `overall_score`
+- `strengths`
+- `weaknesses`
+- `integrity_notes`
+- `recommendation`
+- `recommendation_rationale`
+
 Frontend smoke flow:
 
 1. Open `/admin`, create interview, and go to interview details.
@@ -312,7 +352,9 @@ Frontend smoke flow:
 3. Click **Run Match Analysis**.
 4. Open **Open Candidate Interview View**.
 5. Click **Start Interview** and verify first question is displayed.
-6. Submit an answer and verify the next question appears (or completion if target reached).
+6. Submit answers until the interview reaches **COMPLETED**.
+7. Return to **Interview Details** and click **Generate Report**.
+8. Verify final report cards and transcript rendering.
 
 ## Environment Variables
 
@@ -355,6 +397,8 @@ Based on `frontend/.env.example`:
 - `POST /interviews/{interview_id}/start` -> starts interview and returns first question
 - `POST /interviews/{interview_id}/answer` -> stores answer, scores it, updates difficulty, and returns next question or completion
 - `GET /interviews/{interview_id}/messages` -> returns interview transcript ordered by `created_at`
+- `POST /interviews/{interview_id}/report` -> generates final report and persists it to `interviews.report_json`
+- `GET /interviews/{interview_id}/report` -> returns persisted final report JSON
 
 ### Frontend
 
@@ -370,13 +414,13 @@ Target state machine:
 
 - `DRAFT` -> `READY` -> `IN_PROGRESS` -> `COMPLETED`
 
-Planned core workflows:
+Implemented core workflows:
 
 1. Create + analyze interview
 2. Run adaptive interview loop
 3. Generate final report
 
-The implementation roadmap is defined in `AGENTS.md` (Steps 1-11).
+The implementation roadmap is defined in `AGENTS.md` (Steps 1-16).
 
 ## Development Notes
 
@@ -394,9 +438,13 @@ The implementation roadmap is defined in `AGENTS.md` (Steps 1-11).
 
 ## Next Milestones
 
-1. Final report generation (`POST /interviews/{id}/report`, `GET /interviews/{id}/report`)
-2. Admin report/transcript/score UI
-3. Dockerize API + frontend for local runs
+1. Step 10: Dockerize API + frontend for local runs (`api/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`)
+2. Step 11: Prepare droplet deployment approach (no deploy yet)
+3. Step 12: Refactor backend folders by service and provider/agent responsibility
+4. Step 13: Introduce LangGraph orchestration for interview workflow nodes
+5. Step 14: Add LangChain monitoring/observability hooks
+6. Step 15: Add automated tests for backend and frontend
+7. Step 16: Add CI pipelines to run tests and build Docker images
 
 ## Current document behavior
 
@@ -428,3 +476,12 @@ The backend supports multiple LLM providers. Configure them in `api/.env`:
 - Difficulty updates follow MVP rules: `score >= 7` => `+0.5`, `score <= 4` => `-0.5`, clamped to `3..10`.
 - Response returns either next assistant question (`IN_PROGRESS`) or interview completion (`COMPLETED`).
 - Invalid evaluation JSON returns `503` with `LLM returned invalid answer evaluation JSON.`
+
+## Current report behavior
+
+- `POST /interviews/{id}/report` is accepted only for `COMPLETED` interviews.
+- `overall_score` is calculated in application code from candidate `answer_quality_score` values and rounded to one decimal.
+- `integrity_notes` are calculated in application code from `paste_detected` and response-time-vs-length heuristics.
+- LLM generates summary/strengths/weaknesses/recommendation fields and output is schema-validated.
+- Invalid report JSON returns `503` with `LLM returned invalid report JSON.`
+- `GET /interviews/{id}/report` returns persisted `report_json` or `404` if a report has not been generated yet.

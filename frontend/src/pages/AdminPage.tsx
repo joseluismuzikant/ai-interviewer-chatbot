@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { createInterview } from "../api/client";
+import { AlertMessage, Card, PageContainer, PageTitle, SectionTitle } from "../components/ui";
 
 export function AdminPage() {
   const navigate = useNavigate();
@@ -33,50 +34,70 @@ export function AdminPage() {
   }
 
   return (
-    <section>
-      <h2>Admin</h2>
-      <p>Create and manage interview sessions.</p>
+    <PageContainer>
+      <PageTitle
+        title="Admin"
+        description="Create interview sessions and move through setup, analysis, interview execution, and final reporting."
+      />
 
-      <form className="admin-form" onSubmit={handleSubmit}>
-        <label>
-          Title
-          <input
-            type="text"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="e.g. Backend Engineer Interview"
-          />
-        </label>
+      <Card className="workflow-card">
+        <SectionTitle title="Workflow" subtitle="MVP interview lifecycle" />
+        <ol className="workflow-list">
+          <li>Create interview</li>
+          <li>Upload resume and role description</li>
+          <li>Run match analysis</li>
+          <li>Candidate completes interview</li>
+          <li>Generate final report</li>
+        </ol>
+      </Card>
 
-        <label>
-          Target questions
-          <input
-            type="number"
-            min={1}
-            max={30}
-            value={targetQuestions}
-            onChange={(event) => setTargetQuestions(Number(event.target.value))}
-          />
-        </label>
+      <Card>
+        <SectionTitle
+          title="Create Interview"
+          subtitle="Start with basic interview metadata."
+        />
 
-        <label>
-          Starting difficulty
-          <input
-            type="number"
-            min={3}
-            max={10}
-            step={0.5}
-            value={startingDifficulty}
-            onChange={(event) => setStartingDifficulty(Number(event.target.value))}
-          />
-        </label>
+        <form className="admin-form" onSubmit={handleSubmit}>
+          <label>
+            Title
+            <input
+              type="text"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="e.g. Backend Engineer Interview"
+            />
+          </label>
 
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Creating..." : "Create Interview"}
-        </button>
-      </form>
+          <label>
+            Target questions
+            <input
+              type="number"
+              min={1}
+              max={30}
+              value={targetQuestions}
+              onChange={(event) => setTargetQuestions(Number(event.target.value))}
+            />
+          </label>
 
-      {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-    </section>
+          <label>
+            Starting difficulty
+            <input
+              type="number"
+              min={3}
+              max={10}
+              step={0.5}
+              value={startingDifficulty}
+              onChange={(event) => setStartingDifficulty(Number(event.target.value))}
+            />
+          </label>
+
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Creating interview..." : "Create Interview"}
+          </button>
+        </form>
+
+        {errorMessage ? <AlertMessage kind="error">{errorMessage}</AlertMessage> : null}
+      </Card>
+    </PageContainer>
   );
 }

@@ -694,3 +694,155 @@ GitHub Actions
 ```
 
 Do not implement deployment until the local MVP is complete.
+
+---
+
+# Step 12 — Refactor backend folders (agents and services)
+
+Goal:
+Organize backend code so each service and each agent/provider logic lives in a clear, separate folder.
+
+Requirements:
+
+1. Refactor backend structure under `api/app/` to separate concerns, for example:
+
+```text
+api/app/
+├── api/
+│   └── routes/
+├── core/
+│   ├── config.py
+│   └── llm.py
+├── services/
+│   ├── interview/
+│   ├── documents/
+│   ├── analysis/
+│   ├── interview_start/
+│   ├── interview_answer/
+│   └── report/
+├── agents/
+│   ├── provider_interface/
+│   ├── mock/
+│   ├── openai/
+│   ├── gemini/
+│   └── deepseek/
+├── schemas/
+└── main.py
+```
+
+2. Keep endpoint behavior unchanged.
+3. Keep request/response schemas unchanged.
+4. Update imports to match the new structure.
+5. Keep MVP simple (no unnecessary abstractions).
+
+Validation:
+
+```bash
+cd api
+python -m compileall app
+uvicorn app.main:app --reload
+```
+
+---
+
+# Step 13 — Introduce LangGraph orchestration
+
+Goal:
+Use LangGraph to coordinate interview agents/workflow steps in a controlled graph.
+
+Requirements:
+
+1. Add LangGraph dependency in `api/requirements.txt`.
+2. Introduce a simple orchestration graph for the interview flow.
+3. Start with a minimal graph that coordinates these nodes:
+   - match analysis
+   - question generation
+   - answer evaluation
+   - final report generation
+4. Keep existing API endpoints as entry points.
+5. Move orchestration decisions into the graph layer while preserving current behavior.
+6. Add brief architecture notes in `api/README.md`.
+
+Do not over-engineer state handling in this step.
+
+---
+
+# Step 14 — Add LangChain monitoring/observability
+
+Goal:
+Use LangChain tooling to monitor agent runs and make debugging easier.
+
+Requirements:
+
+1. Add LangChain observability hooks/callbacks around LLM agent execution.
+2. Capture at least:
+   - operation name
+   - model/provider
+   - timing
+   - success/error status
+3. Ensure monitoring is configurable via environment variables.
+4. Keep sensitive data out of logs.
+5. Document configuration in `api/.env.example` and `api/README.md`.
+
+Do not change endpoint contracts in this step.
+
+---
+
+# Step 15 — Add automated tests (backend and frontend)
+
+Goal:
+Add baseline automated test coverage for MVP-critical flows.
+
+Requirements:
+
+Backend:
+
+1. Add a Python test framework setup (pytest).
+2. Add tests for key API/service behaviors:
+   - health endpoint
+   - create/get interview
+   - start interview status gating
+   - answer flow status transitions
+   - report generation gating and shape
+3. Mock LLM/provider dependencies in tests.
+
+Frontend:
+
+1. Add test setup for React (Vitest + Testing Library).
+2. Add tests for key page behavior:
+   - admin create form submit state
+   - interview details section rendering
+   - candidate page status/progress rendering
+   - report section rendering when data exists
+3. Keep tests small and deterministic.
+
+Validation commands:
+
+```bash
+cd api && pytest
+cd frontend && npm run test
+```
+
+---
+
+# Step 16 — CI pipelines to build Docker images
+
+Goal:
+Create CI pipelines that build Docker images for backend and frontend projects.
+
+Requirements:
+
+1. Add GitHub Actions workflows under `.github/workflows/`.
+2. Pipeline should:
+   - run tests
+   - build backend Docker image
+   - build frontend Docker image
+3. Tag images with commit SHA and branch/tag metadata.
+4. Prepare push steps for registry (GHCR), gated by branch or environment.
+5. Do not deploy in this step.
+6. Document pipeline behavior in root `README.md`.
+
+Validation:
+
+- Run workflow on pull request to verify tests + build.
+- Confirm both images are produced successfully.

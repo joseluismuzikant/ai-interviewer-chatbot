@@ -105,6 +105,28 @@ class InterviewAnswerResponse(BaseModel):
     next_question: StartedQuestion | None = None
 
 
+class GeneratedReport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    summary: StrictStr = Field(min_length=1)
+    strengths: list[StrictStr]
+    weaknesses: list[StrictStr]
+    recommendation: Literal["YES", "MIXED", "NO"]
+    recommendation_rationale: StrictStr = Field(min_length=1)
+
+
+class FinalReportResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    summary: StrictStr = Field(min_length=1)
+    overall_score: float = Field(ge=0, le=10)
+    strengths: list[StrictStr]
+    weaknesses: list[StrictStr]
+    integrity_notes: list[StrictStr]
+    recommendation: Literal["YES", "MIXED", "NO"]
+    recommendation_rationale: StrictStr = Field(min_length=1)
+
+
 class DocumentUploadResponse(BaseModel):
     interview_id: UUID
     document_type: Literal["resume", "role_description"]

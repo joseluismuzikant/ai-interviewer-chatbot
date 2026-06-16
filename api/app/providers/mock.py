@@ -1,5 +1,10 @@
 from app.providers.base import LLMProvider
-from app.schemas import AnswerEvaluation, InterviewQuestion, MatchAnalysis
+from app.schemas import (
+    AnswerEvaluation,
+    GeneratedReport,
+    InterviewQuestion,
+    MatchAnalysis,
+)
 
 
 class MockProvider(LLMProvider):
@@ -73,3 +78,20 @@ class MockProvider(LLMProvider):
             "followup_hint": "Ask the candidate to go deeper into error handling, observability, and production trade-offs.",
         }
         return AnswerEvaluation.model_validate(evaluation).model_dump()
+
+    def generate_report(self, context: dict) -> dict:
+        report = {
+            "summary": "The candidate demonstrated solid full-stack engineering experience with good backend and cloud understanding.",
+            "strengths": [
+                "Strong backend and API design knowledge",
+                "Good experience with cloud-native delivery",
+                "Clear practical examples from previous projects",
+            ],
+            "weaknesses": [
+                "Could provide more depth on security and authorization",
+                "Could explain database trade-offs in more detail",
+            ],
+            "recommendation": "YES",
+            "recommendation_rationale": "The candidate shows enough technical strength and relevant experience for the role.",
+        }
+        return GeneratedReport.model_validate(report).model_dump()

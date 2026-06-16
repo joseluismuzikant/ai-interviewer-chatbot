@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from app.config import Settings
 from app.providers.base import LLMProvider
-from app.schemas import AnswerEvaluation, InterviewQuestion, MatchAnalysis
+from app.schemas import AnswerEvaluation, GeneratedReport, InterviewQuestion, MatchAnalysis
 
 
 class GeminiProvider(LLMProvider):
@@ -133,5 +133,42 @@ class GeminiProvider(LLMProvider):
             validated = AnswerEvaluation.model_validate(result)
         except ValidationError as exc:
             raise RuntimeError("LLM returned invalid answer evaluation JSON.") from exc
+
+        return validated.model_dump()
+
+    def generate_report(self, context: dict) -> dict:
+        system_prompt = (
+            "You are a senior technical hiring panelist. Generate a concise final "
+            "candidate report from the transcript and analysis context."
+        )
+        user_prompt = (
+            f"Context JSON:\n{json.dumps(context)}\n\n"
+            "Return ONLY valid JSON with this exact structure:\n"
+            '{"summary":"string","strengths":["string"],"weaknesses":["string"],'
+            '"recommendation":"YES | MIXED | NO","recommendation_rationale":"string"}'
+        )
+
+        try:
+            model = genai.GenerativeModel(self.model, system_instruction=system_prompt)
+            response = model.generate_content(user_prompt)
+        except Exception as exc:
+            raise RuntimeError(f"Gemini API call failed: {exc}") from exc
+
+        content = response.text or "{}"
+        content = content.strip()
+        if content.startswith("```"):
+            content = content.strip("`")
+            if content.startswith("json"):
+                content = content[4:]
+
+        try:
+            result = json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("LLM returned invalid report JSON.") from exc
+
+        try:
+            validated = GeneratedReport.model_validate(result)
+        except ValidationError as exc:
+            raise RuntimeError("LLM returned invalid report JSON.") from exc
 
         return validated.model_dump()

@@ -1,22 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-
-import {
-  InterviewResponse,
-  StartQuestion,
-  getInterview,
-  getInterviewMessages,
-  startInterview,
-  submitAnswer,
-} from "../api/client";
-import {
-  AlertMessage,
-  Card,
-  PageContainer,
-  PageTitle,
-  SectionTitle,
-  StatusBadge,
-} from "../components/ui";
+import { getInterview, startInterview, getInterviewMessages } from "../api/interviewsApi";
+import { submitAnswer } from "../api/reportsApi";
+import type { InterviewResponse, StartQuestion } from "../types/interview";
+import type { AnswerEvaluation } from "../types/report";
+import { PageContainer } from "../components/common/PageContainer";
+import { PageTitle } from "../components/common/PageTitle";
+import { SectionTitle } from "../components/common/SectionTitle";
+import { Card } from "../components/common/Card";
+import { ErrorMessage } from "../components/common/ErrorMessage";
+import { LoadingState } from "../components/common/LoadingState";
+import { StatusBadge } from "../components/common/StatusBadge";
+import { ChatWindow } from "../components/chat/ChatWindow";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -36,6 +31,7 @@ export function CandidateInterviewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [evaluation, setEvaluation] = useState<AnswerEvaluation | null>(null);
 
   useEffect(() => {
     async function loadInterview() {
@@ -46,24 +42,18 @@ export function CandidateInterviewPage() {
         setIsLoading(false);
         return;
       }
-
       if (!hasValidInterviewId) {
         setInterview(null);
         setQuestion(null);
-        setErrorMessage(
-          "Invalid interview ID format. Select a real interview from Admin."
-        );
+        setErrorMessage("Invalid interview ID format. Select a real interview from Admin.");
         setIsLoading(false);
         return;
       }
-
       setIsLoading(true);
       setErrorMessage(null);
-
       try {
         const loadedInterview = await getInterview(interviewId);
         setInterview(loadedInterview);
-
         if (loadedInterview.status === "IN_PROGRESS") {
           try {
             const started = await startInterview(interviewId);
@@ -72,7 +62,7 @@ export function CandidateInterviewPage() {
             const messages = await getInterviewMessages(interviewId);
             const latestAssistant = [...messages]
               .reverse()
-              .find((message) => message.role === "assistant");
+              .find((m) => m.role === "assistant");
             if (latestAssistant) {
               setQuestion({
                 id: latestAssistant.id,
@@ -93,27 +83,20 @@ export function CandidateInterviewPage() {
         setIsLoading(false);
       }
     }
-
     void loadInterview();
   }, [hasInterviewId, hasValidInterviewId, interviewId]);
 
   async function handleStartInterview() {
-    if (!hasValidInterviewId) {
-      return;
-    }
-
+    if (!hasValidInterviewId) return;
     setIsStarting(true);
     setErrorMessage(null);
-
     try {
       const started = await startInterview(interviewId);
       setQuestion(started.question);
       setAnswerText("");
       setPasteDetected(false);
-      setInterview((previous) =>
-        previous
-          ? { ...previous, status: started.status, current_question_number: 1 }
-          : previous
+      setInterview((prev) =>
+        prev ? { ...prev, status: started.status, current_question_number: 1 } : prev
       );
     } catch (error) {
       setErrorMessage(
@@ -129,54 +112,45 @@ export function CandidateInterviewPage() {
       setQuestionShownAt(Date.now());
       setAnswerText("");
       setPasteDetected(false);
+      setEvaluation(null);
     }
   }, [question?.id, question?.question_number, question?.content]);
 
   async function handleSubmitAnswer() {
-    if (!hasValidInterviewId || !question) {
-      return;
-    }
+    if (!hasValidInterviewId || !question) return;
     const trimmed = answerText.trim();
     if (!trimmed) {
       setErrorMessage("Answer cannot be empty.");
       return;
     }
-
     const responseTime = questionShownAt ? Date.now() - questionShownAt : 0;
-
     setIsSubmitting(true);
     setErrorMessage(null);
-
     try {
       const response = await submitAnswer(interviewId, {
         answer: trimmed,
         response_time_ms: responseTime,
         paste_detected: pasteDetected,
       });
-
+      setEvaluation(response.evaluation);
       if (response.status === "COMPLETED") {
-        setInterview((previous) =>
-          previous ? { ...previous, status: "COMPLETED" } : previous
-        );
+        setInterview((prev) => (prev ? { ...prev, status: "COMPLETED" } : prev));
         setQuestion(null);
       } else {
-        setInterview((previous) =>
-          previous
+        setInterview((prev) =>
+          prev
             ? {
-                ...previous,
+                ...prev,
                 status: "IN_PROGRESS",
                 current_question_number:
-                  response.next_question?.question_number ??
-                  previous.current_question_number,
+                  response.next_question?.question_number ?? prev.current_question_number,
               }
-            : previous
+            : prev
         );
         setQuestion(response.next_question);
       }
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Could not submit answer"
-      );
+      setErrorMessage(error instanceof Error ? error.message : "Could not submit answer");
     } finally {
       setIsSubmitting(false);
     }
@@ -190,22 +164,24 @@ export function CandidateInterviewPage() {
       />
 
       {!hasInterviewId ? (
-        <AlertMessage kind="info">
-          No interview selected. Go to <Link to="/admin/interviews">Interview Details</Link> and open a candidate interview from a real interview.
-        </AlertMessage>
+        <p className="alert alert-info">
+          No interview selected. Go to <Link to="/admin/interviews">Interview Details</Link> and open a
+          candidate interview from a real interview.
+        </p>
       ) : null}
 
       {hasInterviewId && !hasValidInterviewId ? (
-        <AlertMessage kind="error">
-          The URL interview ID is invalid. Use <Link to="/admin/interviews">Interview Details</Link> to choose a valid interview.
-        </AlertMessage>
+        <p className="alert alert-error">
+          The URL interview ID is invalid. Use <Link to="/admin/interviews">Interview Details</Link> to
+          choose a valid interview.
+        </p>
       ) : null}
 
-      {errorMessage ? <AlertMessage kind="error">{errorMessage}</AlertMessage> : null}
+      <ErrorMessage message={errorMessage} />
 
       <Card>
         <SectionTitle title="Interview Session" subtitle="Current interview state" />
-        {isLoading ? <p className="muted">Loading interview...</p> : null}
+        {isLoading ? <LoadingState message="Loading interview..." /> : null}
 
         <div className="setup-meta-grid">
           <div className="setup-meta-item">
@@ -239,53 +215,18 @@ export function CandidateInterviewPage() {
         </Card>
       ) : null}
 
-      {question ? (
-        <Card>
-          <SectionTitle
-            title="Current Question"
-            subtitle="Read carefully and provide your best response."
-          />
-
-          <div className="question-content">
-            <p className="question-text">{question.content}</p>
-          </div>
-
-          <div className="question-meta-row">
-            <div className="meta-pill">
-              <span>Topic</span>
-              <strong>{question.topic}</strong>
-            </div>
-            <div className="meta-pill">
-              <span>Difficulty</span>
-              <strong>{question.difficulty}</strong>
-            </div>
-          </div>
-
-          {interview?.status !== "COMPLETED" ? (
-            <div className="answer-form-block">
-              <label htmlFor="candidate-answer" className="meta-label">
-                Your Answer
-              </label>
-              <textarea
-                id="candidate-answer"
-                value={answerText}
-                onChange={(event) => setAnswerText(event.target.value)}
-                onPaste={() => setPasteDetected(true)}
-                rows={8}
-                placeholder="Type your answer here..."
-                disabled={isSubmitting}
-              />
-
-              {isSubmitting ? (
-                <p className="muted">Evaluating answer and preparing next question...</p>
-              ) : null}
-
-              <button type="button" onClick={handleSubmitAnswer} disabled={isSubmitting}>
-                {isSubmitting ? "Submitting..." : "Submit Answer"}
-              </button>
-            </div>
-          ) : null}
-        </Card>
+      {question || evaluation ? (
+        <ChatWindow
+          messages={[]}
+          question={question}
+          answerText={answerText}
+          onAnswerChange={setAnswerText}
+          onPasteDetected={() => setPasteDetected(true)}
+          onSubmitAnswer={handleSubmitAnswer}
+          isSubmitting={isSubmitting}
+          isCompleted={interview?.status === "COMPLETED"}
+          evaluation={evaluation}
+        />
       ) : null}
     </PageContainer>
   );

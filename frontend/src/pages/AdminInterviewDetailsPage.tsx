@@ -1,79 +1,37 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-
 import {
-  DocumentRecord,
-  DocumentType,
-  FinalReportResponse,
-  InterviewResponse,
-  MatchAnalysis,
-  MessageResponse,
-  UploadDocumentResponse,
-  analyzeInterview,
-  generateReport,
-  getInterview,
-  getInterviewDocuments,
-  getInterviewMessages,
   getInterviews,
-  getReport,
-  uploadInterviewDocument,
-} from "../api/client";
-import {
-  AlertMessage,
-  Card,
-  MetricCard,
-  PageContainer,
-  PageTitle,
-  SectionTitle,
-  StatusBadge,
-} from "../components/ui";
-
-type UploadState = {
-  isUploading: boolean;
-  message: string | null;
-};
-
-function formatDate(value: string | null): string {
-  if (!value) {
-    return "";
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return "";
-  }
-
-  return parsed.toLocaleString();
-}
-
-function shortId(id: string): string {
-  if (id.length <= 16) {
-    return id;
-  }
-  return `${id.slice(0, 8)}...${id.slice(-6)}`;
-}
+  getInterview,
+  analyzeInterview,
+  getInterviewMessages,
+} from "../api/interviewsApi";
+import { getInterviewDocuments, uploadInterviewDocument } from "../api/documentsApi";
+import { generateReport, getReport } from "../api/reportsApi";
+import type { InterviewResponse, MatchAnalysis } from "../types/interview";
+import type { DocumentRecord, DocumentType } from "../types/document";
+import type { MessageResponse } from "../types/message";
+import type { FinalReportResponse } from "../types/interview";
+import { PageContainer } from "../components/common/PageContainer";
+import { PageTitle } from "../components/common/PageTitle";
+import { SectionTitle } from "../components/common/SectionTitle";
+import { Card } from "../components/common/Card";
+import { ErrorMessage } from "../components/common/ErrorMessage";
+import { LoadingState } from "../components/common/LoadingState";
+import { EmptyState } from "../components/common/EmptyState";
+import { InterviewPicker } from "../components/interviews/InterviewPicker";
+import { DocumentUpload } from "../components/documents/DocumentUpload";
+import { ReportView } from "../components/reports/ReportView";
+import { StatusBadge } from "../components/common/StatusBadge";
+import { MessageBubble } from "../components/chat/MessageBubble";
 
 export function AdminInterviewDetailsPage() {
   const { id } = useParams();
   const [interviews, setInterviews] = useState<InterviewResponse[]>([]);
   const [selectedInterviewId, setSelectedInterviewId] = useState("");
-  const [selectedInterview, setSelectedInterview] = useState<InterviewResponse | null>(
-    null
-  );
+  const [selectedInterview, setSelectedInterview] = useState<InterviewResponse | null>(null);
   const [isLoadingInterviews, setIsLoadingInterviews] = useState(true);
   const [interviewsError, setInterviewsError] = useState<string | null>(null);
-
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [roleFile, setRoleFile] = useState<File | null>(null);
-  const [resumeState, setResumeState] = useState<UploadState>({
-    isUploading: false,
-    message: null,
-  });
-  const [roleState, setRoleState] = useState<UploadState>({
-    isUploading: false,
-    message: null,
-  });
-
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -89,54 +47,38 @@ export function AdminInterviewDetailsPage() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
   const resumeDocument = useMemo(
-    () => documents.find((item) => item.document_type === "resume"),
+    () => documents.find((d) => d.document_type === "resume"),
     [documents]
   );
   const roleDocument = useMemo(
-    () => documents.find((item) => item.document_type === "role_description"),
+    () => documents.find((d) => d.document_type === "role_description"),
     [documents]
   );
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadInterviews() {
+    let mounted = true;
+    async function load() {
       setIsLoadingInterviews(true);
       setInterviewsError(null);
-
       try {
         const data = await getInterviews();
-        if (!isMounted) {
-          return;
-        }
-
+        if (!mounted) return;
         setInterviews(data);
         if (data.length === 0) {
           setSelectedInterviewId("");
           return;
         }
-
         const hasParamId = Boolean(id) && data.some((item) => item.id === id);
         setSelectedInterviewId(hasParamId ? (id as string) : data[0].id);
       } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-        setInterviewsError(
-          error instanceof Error ? error.message : "Could not load interviews"
-        );
+        if (!mounted) return;
+        setInterviewsError(error instanceof Error ? error.message : "Could not load interviews");
       } finally {
-        if (isMounted) {
-          setIsLoadingInterviews(false);
-        }
+        if (mounted) setIsLoadingInterviews(false);
       }
     }
-
-    void loadInterviews();
-
-    return () => {
-      isMounted = false;
-    };
+    void load();
+    return () => { mounted = false; };
   }, [id]);
 
   async function loadDocuments(interviewId: string) {
@@ -153,13 +95,11 @@ export function AdminInterviewDetailsPage() {
       const interview = await getInterview(interviewId);
       setSelectedInterview(interview);
       setAnalysisResult(interview.match_analysis_json ?? null);
-
       if (interview.report_json) {
         setReportResult(interview.report_json);
         setReportError(null);
         return;
       }
-
       if (interview.status === "COMPLETED") {
         try {
           const report = await getReport(interviewId);
@@ -176,11 +116,7 @@ export function AdminInterviewDetailsPage() {
       setSelectedInterview(null);
       setReportResult(null);
       setAnalysisResult(null);
-      setInterviewsError(
-        error instanceof Error
-          ? error.message
-          : "Could not load interview details"
-      );
+      setInterviewsError(error instanceof Error ? error.message : "Could not load interview details");
     }
   }
 
@@ -192,9 +128,7 @@ export function AdminInterviewDetailsPage() {
       setMessages(data);
     } catch (error) {
       setMessages([]);
-      setMessagesError(
-        error instanceof Error ? error.message : "Could not load transcript"
-      );
+      setMessagesError(error instanceof Error ? error.message : "Could not load transcript");
     } finally {
       setIsLoadingMessages(false);
     }
@@ -209,83 +143,31 @@ export function AdminInterviewDetailsPage() {
       setMessages([]);
       return;
     }
-
     void loadDocuments(selectedInterviewId);
     void loadInterviewDetails(selectedInterviewId);
     void loadMessages(selectedInterviewId);
   }, [selectedInterviewId]);
 
-  async function submitUpload(
-    event: FormEvent<HTMLFormElement>,
-    documentType: DocumentType
-  ) {
-    event.preventDefault();
-    if (!selectedInterviewId) {
-      return;
-    }
-
-    const selectedFile = documentType === "resume" ? resumeFile : roleFile;
-    if (!selectedFile) {
-      const noFileMessage = "Please select a PDF file before uploading.";
-      if (documentType === "resume") {
-        setResumeState({ isUploading: false, message: noFileMessage });
-      } else {
-        setRoleState({ isUploading: false, message: noFileMessage });
-      }
-      return;
-    }
-
-    const setState = documentType === "resume" ? setResumeState : setRoleState;
-    setState({ isUploading: true, message: null });
-
-    try {
-      const result: UploadDocumentResponse = await uploadInterviewDocument(
-        selectedInterviewId,
-        documentType,
-        selectedFile
-      );
-      setState({
-        isUploading: false,
-        message: `${documentType} uploaded (${result.extracted_character_count} chars extracted).`,
-      });
-      void loadDocuments(selectedInterviewId);
-    } catch (error) {
-      setState({
-        isUploading: false,
-        message: error instanceof Error ? error.message : "Upload failed",
-      });
-    }
+  async function handleUpload(documentType: DocumentType, file: File) {
+    await uploadInterviewDocument(selectedInterviewId, documentType, file);
+    void loadDocuments(selectedInterviewId);
   }
 
   async function handleAnalyze() {
-    if (!selectedInterviewId) {
-      return;
-    }
-
+    if (!selectedInterviewId) return;
     setIsAnalyzing(true);
     setAnalysisResult(null);
     setAnalysisError(null);
-
     try {
       const result = await analyzeInterview(selectedInterviewId);
       setAnalysisResult(result);
-      setSelectedInterview((previous) =>
-        previous
-          ? {
-              ...previous,
-              status: "READY",
-              match_analysis_json: result,
-            }
-          : previous
+      setSelectedInterview((prev) =>
+        prev ? { ...prev, status: "READY", match_analysis_json: result } : prev
       );
-      setInterviews((previous) =>
-        previous.map((item) =>
+      setInterviews((prev) =>
+        prev.map((item) =>
           item.id === selectedInterviewId
-            ? {
-                ...item,
-                status: "READY",
-                match_analysis_json: result,
-              }
+            ? { ...item, status: "READY", match_analysis_json: result }
             : item
         )
       );
@@ -297,39 +179,21 @@ export function AdminInterviewDetailsPage() {
   }
 
   async function handleGenerateReport() {
-    if (!selectedInterviewId) {
-      return;
-    }
-
+    if (!selectedInterviewId) return;
     setIsGeneratingReport(true);
     setReportError(null);
-
     try {
       const report = await generateReport(selectedInterviewId);
       setReportResult(report);
-      setSelectedInterview((previous) =>
-        previous
-          ? {
-              ...previous,
-              report_json: report,
-            }
-          : previous
-      );
-      setInterviews((previous) =>
-        previous.map((item) =>
-          item.id === selectedInterviewId
-            ? {
-                ...item,
-                report_json: report,
-              }
-            : item
+      setSelectedInterview((prev) => (prev ? { ...prev, report_json: report } : prev));
+      setInterviews((prev) =>
+        prev.map((item) =>
+          item.id === selectedInterviewId ? { ...item, report_json: report } : item
         )
       );
       void loadMessages(selectedInterviewId);
     } catch (error) {
-      setReportError(
-        error instanceof Error ? error.message : "Could not generate report"
-      );
+      setReportError(error instanceof Error ? error.message : "Could not generate report");
     } finally {
       setIsGeneratingReport(false);
     }
@@ -341,32 +205,17 @@ export function AdminInterviewDetailsPage() {
         title="Interview Details"
         description="Set up interview inputs, review AI analysis, and inspect final outcomes."
       />
-
-      {interviewsError ? <AlertMessage kind="error">{interviewsError}</AlertMessage> : null}
+      <ErrorMessage message={interviewsError} />
 
       <Card>
         <SectionTitle title="Setup" subtitle="Select an interview and open the candidate view." />
-
-        <label className="interview-picker">
-          Interview
-          <select
-            value={selectedInterviewId}
-            onChange={(event) => setSelectedInterviewId(event.target.value)}
-            disabled={isLoadingInterviews || interviews.length === 0}
-          >
-            {interviews.length === 0 ? (
-              <option value="">No interviews available</option>
-            ) : (
-              interviews.map((interview) => (
-                <option key={interview.id} value={interview.id}>
-                  {interview.title?.trim() || `Untitled interview (${shortId(interview.id)})`}
-                </option>
-              ))
-            )}
-          </select>
-        </label>
-
-        {isLoadingInterviews ? <p className="muted">Loading interviews...</p> : null}
+        <InterviewPicker
+          interviews={interviews}
+          selectedId={selectedInterviewId}
+          onChange={setSelectedInterviewId}
+          disabled={isLoadingInterviews}
+        />
+        {isLoadingInterviews ? <LoadingState message="Loading interviews..." /> : null}
 
         {selectedInterviewId ? (
           <div className="setup-meta-grid">
@@ -393,54 +242,21 @@ export function AdminInterviewDetailsPage() {
           title="Documents"
           subtitle="Upload one resume and one role description PDF. Re-uploads replace previous files."
         />
-
         <div className="upload-grid">
-          <form className="upload-card" onSubmit={(event) => submitUpload(event, "resume")}>
-            <h4>Resume</h4>
-            {resumeDocument ? (
-              <p className="doc-info">
-                <strong>{resumeDocument.filename}</strong>
-                <span>{resumeDocument.extracted_character_count} characters extracted</span>
-              </p>
-            ) : (
-              <p className="muted">No resume uploaded yet.</p>
-            )}
-
-            <input
-              type="file"
-              accept="application/pdf,.pdf"
-              onChange={(event) => setResumeFile(event.target.files?.[0] ?? null)}
-            />
-            <button type="submit" disabled={resumeState.isUploading || !selectedInterviewId}>
-              {resumeState.isUploading ? "Uploading..." : "Upload Resume"}
-            </button>
-            {resumeState.message ? <AlertMessage kind="info">{resumeState.message}</AlertMessage> : null}
-          </form>
-
-          <form
-            className="upload-card"
-            onSubmit={(event) => submitUpload(event, "role_description")}
-          >
-            <h4>Role Description</h4>
-            {roleDocument ? (
-              <p className="doc-info">
-                <strong>{roleDocument.filename}</strong>
-                <span>{roleDocument.extracted_character_count} characters extracted</span>
-              </p>
-            ) : (
-              <p className="muted">No role description uploaded yet.</p>
-            )}
-
-            <input
-              type="file"
-              accept="application/pdf,.pdf"
-              onChange={(event) => setRoleFile(event.target.files?.[0] ?? null)}
-            />
-            <button type="submit" disabled={roleState.isUploading || !selectedInterviewId}>
-              {roleState.isUploading ? "Uploading..." : "Upload Role Description"}
-            </button>
-            {roleState.message ? <AlertMessage kind="info">{roleState.message}</AlertMessage> : null}
-          </form>
+          <DocumentUpload
+            documentType="resume"
+            label="Resume"
+            existingDocument={resumeDocument}
+            onUpload={(file) => handleUpload("resume", file)}
+            disabled={!selectedInterviewId}
+          />
+          <DocumentUpload
+            documentType="role_description"
+            label="Role Description"
+            existingDocument={roleDocument}
+            onUpload={(file) => handleUpload("role_description", file)}
+            disabled={!selectedInterviewId}
+          />
         </div>
       </Card>
 
@@ -454,9 +270,7 @@ export function AdminInterviewDetailsPage() {
             </button>
           }
         />
-
-        {analysisError ? <AlertMessage kind="error">{analysisError}</AlertMessage> : null}
-
+        <ErrorMessage message={analysisError} />
         {analysisResult ? (
           <div className="analysis-layout">
             <div className="summary-grid">
@@ -469,7 +283,6 @@ export function AdminInterviewDetailsPage() {
                 <p>{analysisResult.candidate_summary}</p>
               </Card>
             </div>
-
             <div className="analysis-columns">
               <div>
                 <h4>Focus Areas</h4>
@@ -478,7 +291,7 @@ export function AdminInterviewDetailsPage() {
                 ) : (
                   <div className="chip-grid">
                     {analysisResult.focus_areas.map((item, idx) => (
-                      <Card key={`${item.topic}-${idx}`} className="chip-card">
+                      <Card key={`fa-${idx}`} className="chip-card">
                         <strong>{item.topic}</strong>
                         <p>{item.reason}</p>
                       </Card>
@@ -486,7 +299,6 @@ export function AdminInterviewDetailsPage() {
                   </div>
                 )}
               </div>
-
               <div>
                 <h4>Potential Gaps</h4>
                 {analysisResult.potential_gaps.length === 0 ? (
@@ -494,7 +306,7 @@ export function AdminInterviewDetailsPage() {
                 ) : (
                   <div className="chip-grid">
                     {analysisResult.potential_gaps.map((item, idx) => (
-                      <Card key={`${item.topic}-${idx}`} className="chip-card">
+                      <Card key={`pg-${idx}`} className="chip-card">
                         <strong>{item.topic}</strong>
                         <p>{item.reason}</p>
                       </Card>
@@ -505,7 +317,7 @@ export function AdminInterviewDetailsPage() {
             </div>
           </div>
         ) : (
-          <p className="muted">Run analysis to display structured candidate-role insights.</p>
+          <EmptyState message="Run analysis to display structured candidate-role insights." />
         )}
       </Card>
 
@@ -525,107 +337,30 @@ export function AdminInterviewDetailsPage() {
             ) : null
           }
         />
-
         {selectedInterview?.status !== "COMPLETED" ? (
-          <AlertMessage kind="info">
+          <p className="alert alert-info">
             Final report is available when the interview status is COMPLETED.
-          </AlertMessage>
+          </p>
         ) : null}
-
-        {reportError ? <AlertMessage kind="error">{reportError}</AlertMessage> : null}
-
+        <ErrorMessage message={reportError} />
         {reportResult ? (
-          <div className="report-layout">
-            <div className="report-metrics">
-              <MetricCard label="Overall Score" value={reportResult.overall_score} tone="accent" />
-              <div className="metric-card metric-neutral">
-                <span className="metric-label">Recommendation</span>
-                <strong
-                  className={`recommendation-badge recommendation-${reportResult.recommendation.toLowerCase()}`}
-                >
-                  {reportResult.recommendation}
-                </strong>
-              </div>
-            </div>
-
-            <Card className="summary-card">
-              <h4>Summary</h4>
-              <p>{reportResult.summary}</p>
-            </Card>
-
-            <div className="report-columns">
-              <Card>
-                <h4>Strengths</h4>
-                {reportResult.strengths.length === 0 ? (
-                  <p className="muted">No strengths listed.</p>
-                ) : (
-                  <ul>
-                    {reportResult.strengths.map((item, idx) => (
-                      <li key={`${item}-${idx}`}>{item}</li>
-                    ))}
-                  </ul>
-                )}
-              </Card>
-
-              <Card>
-                <h4>Weaknesses</h4>
-                {reportResult.weaknesses.length === 0 ? (
-                  <p className="muted">No weaknesses listed.</p>
-                ) : (
-                  <ul>
-                    {reportResult.weaknesses.map((item, idx) => (
-                      <li key={`${item}-${idx}`}>{item}</li>
-                    ))}
-                  </ul>
-                )}
-              </Card>
-            </div>
-
-            <Card>
-              <h4>Recommendation Rationale</h4>
-              <p>{reportResult.recommendation_rationale}</p>
-            </Card>
-
-            {reportResult.integrity_notes.length > 0 ? (
-              <Card>
-                <h4>Integrity Notes</h4>
-                <ul>
-                  {reportResult.integrity_notes.map((item, idx) => (
-                    <li key={`${item}-${idx}`}>{item}</li>
-                  ))}
-                </ul>
-              </Card>
-            ) : null}
-          </div>
-        ) : (
-          <p className="muted">No final report generated yet.</p>
-        )}
+          <ReportView report={reportResult} status={selectedInterview?.status} />
+        ) : selectedInterview?.status === "COMPLETED" ? (
+          <EmptyState message="No final report generated yet." />
+        ) : null}
       </Card>
 
       <Card>
         <SectionTitle title="Transcript" subtitle="Ordered interview conversation and candidate responses." />
-
-        {messagesError ? <AlertMessage kind="error">{messagesError}</AlertMessage> : null}
-        {isLoadingMessages ? <p className="muted">Loading transcript...</p> : null}
+        <ErrorMessage message={messagesError} />
+        {isLoadingMessages ? <LoadingState message="Loading transcript..." /> : null}
 
         {!isLoadingMessages && messages.length === 0 ? (
-          <p className="muted">No messages yet.</p>
+          <EmptyState message="No messages yet." />
         ) : (
           <div className="chat-thread">
-            {messages.map((message) => (
-              <article
-                key={message.id}
-                className={`chat-row chat-${message.role === "candidate" ? "candidate" : "assistant"}`}
-              >
-                <div className="chat-bubble">
-                  <div className="chat-meta">
-                    <span className="chat-role">{message.role.toUpperCase()}</span>
-                    {message.question_number ? <span>Q{message.question_number}</span> : null}
-                    {message.created_at ? <span>{formatDate(message.created_at)}</span> : null}
-                  </div>
-                  <p>{message.content}</p>
-                </div>
-              </article>
+            {messages.map((msg) => (
+              <MessageBubble key={msg.id} message={msg} />
             ))}
           </div>
         )}

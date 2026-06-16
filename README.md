@@ -25,70 +25,6 @@ The intended end-to-end flow is:
 
 This MVP emphasizes deterministic orchestration around LLM calls, structured JSON outputs, and persistence of interview transcripts and scoring metadata.
 
-- **Test status:** `cd api && pytest` → 87/87 passed (backend), 39 modules build cleanly
-
-## Current Status
-
-Implemented now:
-
-- Backend skeleton with FastAPI
-- Health endpoint: `GET /health`
-- Backend CORS for local frontend origins
-- Environment-driven backend configuration via `.env`
-- Supabase client wiring in backend
-- Interview endpoints:
-  - `POST /interviews`
-  - `GET /interviews`
-  - `GET /interviews/{interview_id}`
-  - `DELETE /interviews/{interview_id}`
-- Supabase schema SQL file: `docs/supabase_schema.sql`
-- Frontend routes and polished MVP UI for admin and candidate flows
-- Frontend API client configured via `VITE_API_URL`
-- Admin create-interview form (title, target questions, starting difficulty)
-- Redirect from `/admin` to `/admin/interviews/:id` after successful creation
-- Document upload endpoint with PDF extraction:
-  - `POST /interviews/{interview_id}/documents`
-- Document listing endpoints:
-  - `GET /interviews/{interview_id}/documents` (from DB)
-  - `GET /interviews/{interview_id}/documentsFromStorage` (from Storage)
-- Document delete endpoint:
-  - `DELETE /interviews/{interview_id}/documents/{filename}`
-- LLM Match analysis endpoint:
-  - `POST /interviews/{interview_id}/analyze`
-- Interview start endpoints:
-  - `POST /interviews/{interview_id}/start`
-  - `GET /interviews/{interview_id}/messages`
-- Frontend upload UI for resume and role description PDFs with upload status
-- Frontend interview-title dropdown on interview details page
-- Upload errors surfaced with backend-friendly messages
-- Frontend analysis button rendering structured match JSON output
-- Candidate page start-interview flow (READY -> IN_PROGRESS)
-- Candidate page guard for missing/invalid interview IDs
-- Answer submission endpoint with candidate reply persistence:
-  - `POST /interviews/{interview_id}/answer`
-- LLM answer evaluation with strict JSON schema validation
-- Deterministic difficulty updates (`+0.5` / `-0.5`, clamp `3..10`)
-- Next-question generation loop until `target_questions` is reached
-- Interview completion transition when target count is reached
-- Candidate UI question-answer loop with loading/error handling and progress (`Question X of Y`)
-- Candidate UI intentionally hides internal evaluation details and expected signals
-- Final report endpoints:
-  - `POST /interviews/{interview_id}/report`
-  - `GET /interviews/{interview_id}/report`
-- Report generation from transcript + match analysis with strict LLM JSON validation
-- Application-calculated `overall_score` and integrity notes persisted in `interviews.report_json`
-- Admin UI report generation and report display (summary, score, strengths, weaknesses, integrity notes, recommendation)
-- Admin transcript shown as chat-style message thread
-- Refined frontend UI/UX with reusable page/card/badge/alert components and responsive layout
-- Docker support for local development (`docker compose up --build`)
-- Backend refactored to Onion Architecture with clear separation of concerns
-- Automated backend tests: 87 tests across 8 test files, FakeSupabaseClient in-memory store, FastAPI dependency_overrides, MockProvider for LLM
-
-Not implemented yet (planned):
-
-- Step 14: LangGraph orchestration layer
-- Step 15: LangChain monitoring/observability
-- Step 16: CI pipelines for test + Docker image builds
 
 ## Architecture (MVP)
 
@@ -497,11 +433,6 @@ The implementation roadmap is defined in `AGENTS.md` (Steps 1-16).
 ![Candidate Interview UI](docs/screens/front-2.png)
 
 ## Next Milestones
-
-Completed:
-
-- Step 10: Dockerize API + frontend for local runs (`docker compose up --build`)
-- Step 12: Backend refactored to Onion Architecture (`domain/`, `application/`, `infrastructure/`, `presentation/`, `core/`)
 
 Planned:
 

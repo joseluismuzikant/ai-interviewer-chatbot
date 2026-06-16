@@ -2,18 +2,10 @@
 
 This directory contains the MVP frontend for the AI Interviewer Chatbot.
 
-## Implemented scope
+## Implemented details
 
-- Vite + React + TypeScript setup
-- Routes for admin and candidate flows
-- API client configured via `VITE_API_URL`
-- Reusable UI primitives for consistent layout and styling:
-  - page container
-  - card
-  - section title
-  - status badge
-  - alert/message blocks
-  - metric card
+- Frontend: Vite + React + TypeScript setup
+- API client implemented with Python and FastAPi
 - Responsive global layout with sticky header/navigation and max-width content
 - Admin interview creation form (title, target questions, starting difficulty)
 - Interview Details page with sectioned workflow:
@@ -22,21 +14,16 @@ This directory contains the MVP frontend for the AI Interviewer Chatbot.
   - Match Analysis
   - Final Report
   - Transcript
-- Document upload UI for resume and role description with current filename + extracted character count
-- Match analysis rendering (`role_summary`, `candidate_summary`, `focus_areas`, `potential_gaps`)
-- Candidate start flow (`POST /interviews/{id}/start`)
-- Candidate answer flow (`POST /interviews/{id}/answer`) with progress and completion card
-- Candidate UI intentionally hides internal evaluation data and expected signals
-- Final report flow (`POST /interviews/{id}/report`, `GET /interviews/{id}/report`) with admin-side rendering
-- Transcript rendering in chat-style bubbles on the admin page
 
 ## Run locally
+
 
 ```bash
 npm install
 cp .env.example .env
 npm run dev
 ```
+
 
 The app runs on Vite's default local URL (usually `http://localhost:5173`).
 
@@ -96,14 +83,6 @@ Not displayed to candidate (intentional for MVP):
 - evaluation payload (`score`, `rationale`, `evidence`, `followup_hint`)
 - expected signals
 
-## UI and styling notes
-
-- Plain CSS only (`src/styles.css`), no Tailwind or external UI framework.
-- Design is intentionally simple and demo-ready:
-  - neutral professional palette
-  - clear section hierarchy
-  - readable spacing and responsive cards
-  - status and recommendation badges
 
 ## Backend requirements
 
@@ -112,8 +91,3 @@ Not displayed to candidate (intentional for MVP):
 - Supabase Storage bucket `interview-documents` must exist.
 - `LLM_PROVIDER` must be configured (recommend `mock` for local MVP testing).
 
-## Upcoming frontend steps (from AGENTS.md)
-
-- ~~Step 10: add `frontend/Dockerfile` for local containerized runs.~~ **Done**
-- Step 15: add automated frontend tests using Vitest + Testing Library.
-- Step 16: add CI workflows to run frontend tests and build frontend Docker images.

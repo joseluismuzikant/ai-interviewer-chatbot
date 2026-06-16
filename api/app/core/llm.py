@@ -1,9 +1,9 @@
-from app.config import Settings
-from app.providers.base import LLMProvider
-from app.providers.deepseek_provider import DeepSeekProvider
-from app.providers.gemini_provider import GeminiProvider
-from app.providers.mock import MockProvider
-from app.providers.openai_provider import OpenAIProvider
+from app.core.config import Settings
+from app.domain.interfaces.llm_provider import LLMProvider
+from app.infrastructure.llm.deepseek_provider import DeepSeekProvider
+from app.infrastructure.llm.gemini_provider import GeminiProvider
+from app.infrastructure.llm.mock import MockProvider
+from app.infrastructure.llm.openai_provider import OpenAIProvider
 
 _PROVIDER_MAP: dict[str, type[LLMProvider]] = {
     "mock": MockProvider,

@@ -79,11 +79,11 @@ Implemented now:
 - Admin transcript shown as chat-style message thread
 - Refined frontend UI/UX with reusable page/card/badge/alert components and responsive layout
 - Docker support for local development (`docker compose up --build`)
+- Backend refactored to Onion Architecture with clear separation of concerns
 
 Not implemented yet (planned):
 
 - Step 11: Droplet deployment preparation plan
-- Step 12: Backend folder refactor (services + agents/providers)
 - Step 13: LangGraph orchestration layer
 - Step 14: LangChain monitoring/observability
 - Step 15: Automated tests (backend + frontend)
@@ -164,28 +164,55 @@ ai-interviewer-chatbot/
 │   ├── README.md
 │   ├── requirements.txt
 │   ├── .env.example
+│   ├── Dockerfile
+│   ├── .dockerignore
 │   └── app/
-│       ├── main.py
-│       ├── config.py
-│       ├── schemas.py
-│       ├── llm.py
-│       ├── interview_service.py
-│       ├── document_service.py
-│       ├── analysis_service.py
-│       ├── interview_start_service.py
-│       ├── interview_answer_service.py
-│       ├── report_service.py
-│       ├── question_meta_store.py
-│       └── providers/
-│           ├── base.py
-│           ├── mock.py
-│           ├── openai_provider.py
-│           ├── gemini_provider.py
-│           └── deepseek_provider.py
+│       ├── __init__.py
+│       ├── main.py                  # FastAPI app setup, CORS, router includes
+│       ├── schemas.py               # Backward-compat re-exports
+│       ├── core/
+│       │   ├── config.py            # pydantic-settings Settings
+│       │   └── llm.py               # LLM provider factory
+│       ├── domain/
+│       │   └── interfaces/
+│       │       └── llm_provider.py  # Abstract LLMProvider base
+│       ├── application/
+│       │   └── use_cases/
+│       │       ├── analysis_service.py
+│       │       ├── document_service.py
+│       │       ├── interview_service.py
+│       │       ├── interview_start_service.py
+│       │       ├── interview_answer_service.py
+│       │       ├── report_service.py
+│       │       └── question_meta_store.py
+│       ├── infrastructure/
+│       │   ├── data/
+│       │   │   └── supabase_client.py
+│       │   └── llm/
+│       │       ├── mock.py
+│       │       ├── openai_provider.py
+│       │       ├── gemini_provider.py
+│       │       └── deepseek_provider.py
+│       └── presentation/
+│           ├── dependencies.py       # DI wire-up
+│           ├── controllers/
+│           │   ├── health.py         # GET /health
+│           │   └── interviews.py     # All interview endpoints
+│           └── schemas/
+│               ├── analysis.py
+│               ├── answer.py
+│               ├── document.py
+│               ├── health.py
+│               ├── interview.py
+│               ├── message.py
+│               ├── question.py
+│               └── report.py
 ├── frontend/
 │   ├── README.md
 │   ├── package.json
 │   ├── .env.example
+│   ├── Dockerfile
+│   ├── .dockerignore
 │   └── src/
 │       ├── App.tsx
 │       ├── components/ui.tsx
@@ -473,12 +500,12 @@ The implementation roadmap is defined in `AGENTS.md` (Steps 1-16).
 Completed:
 
 - Step 10: Dockerize API + frontend for local runs (`docker compose up --build`)
+- Step 12: Backend refactored to Onion Architecture (`domain/`, `application/`, `infrastructure/`, `presentation/`, `core/`)
 
 Planned:
 
 1. Step 11: Prepare droplet deployment approach (no deploy yet)
-2. Step 12: Refactor backend folders by service and provider/agent responsibility
-3. Step 13: Introduce LangGraph orchestration for interview workflow nodes
+2. Step 13: Introduce LangGraph orchestration for interview workflow nodes
 4. Step 14: Add LangChain monitoring/observability hooks
 5. Step 15: Add automated tests for backend and frontend
 6. Step 16: Add CI pipelines to run tests and build Docker images

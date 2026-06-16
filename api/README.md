@@ -208,10 +208,40 @@ Notes:
 - Invalid answer-evaluation JSON from any provider returns `503` with `LLM returned invalid answer evaluation JSON.`
 - Invalid final-report JSON from any provider returns `503` with `LLM returned invalid report JSON.`
 
+## Architecture (Onion / Step 12)
+
+The backend follows an Onion Architecture with four concentric layers:
+
+```text
+api/app/
+├── core/                 # Cross-cutting: config, LLM provider factory
+├── domain/               # Enterprise business rules (abstract interfaces)
+│   └── interfaces/
+├── application/          # Application business rules (use cases / services)
+│   └── use_cases/
+├── infrastructure/       # External adapters (Supabase, LLM providers)
+│   ├── data/
+│   └── llm/
+└── presentation/         # HTTP layer (controllers, Pydantic schemas, DI)
+    ├── controllers/
+    ├── schemas/
+    └── dependencies.py
+
+Dependency direction:
+  domain ← application ← infrastructure → domain
+  domain ← presentation → application → infrastructure
+```
+
+- No layer imports from an outer layer.
+- `app/schemas.py` provides backward-compatible re-exports of all Pydantic models.
+- The LLM provider interface lives in `domain/interfaces/`; concrete implementations live in `infrastructure/llm/`.
+- Use-case service classes live in `application/use_cases/`.
+- HTTP routing lives in `presentation/controllers/` as FastAPI `APIRouter` instances.
+
 ## Upcoming backend steps (from AGENTS.md)
 
 - ~~Step 10: add `api/Dockerfile` for local containerization.~~ **Done**
-- Step 12: refactor backend structure so each service and each provider/agent has a clearer dedicated folder.
+- ~~Step 12: refactor backend structure to Onion Architecture.~~ **Done**
 - Step 13: introduce LangGraph for orchestration of analysis/question/evaluation/report nodes.
 - Step 14: add LangChain monitoring/observability hooks around LLM operations.
 - Step 15: add pytest-based automated tests for MVP-critical backend flows.

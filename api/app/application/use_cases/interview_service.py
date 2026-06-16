@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from supabase import Client
 
-from app.schemas import InterviewCreateRequest
+from app.presentation.schemas.interview import InterviewCreateRequest
 
 
 class InterviewService:

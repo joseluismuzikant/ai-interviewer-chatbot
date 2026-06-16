@@ -1,25 +1,22 @@
 import json
 
-from openai import APIStatusError, OpenAI
+from openai import OpenAI
 from pydantic import ValidationError
 
-from app.config import Settings
-from app.providers.base import LLMProvider
+from app.core.config import Settings
+from app.domain.interfaces.llm_provider import LLMProvider
 from app.schemas import AnswerEvaluation, GeneratedReport, InterviewQuestion, MatchAnalysis
 
 
-class DeepSeekProvider(LLMProvider):
+class OpenAIProvider(LLMProvider):
     def __init__(self, settings: Settings) -> None:
-        self.model = settings.deepseek_model
-        self.api_key = settings.deepseek_api_key
+        self.model = settings.openai_model
+        self.api_key = settings.openai_api_key
         self._client: OpenAI | None = None
 
     def _get_client(self) -> OpenAI:
         if not self._client:
-            self._client = OpenAI(
-                api_key=self.api_key,
-                base_url="https://api.deepseek.com/v1",
-            )
+            self._client = OpenAI(api_key=self.api_key)
         return self._client
 
     def analyze_match(
@@ -47,20 +44,9 @@ class DeepSeekProvider(LLMProvider):
                 ],
                 temperature=0.3,
             )
-        except APIStatusError as exc:
-            if exc.status_code == 402 or (
-                exc.message and "insufficient balance" in exc.message.lower()
-            ):
-                raise RuntimeError(
-                    "DeepSeek balance is insufficient. "
-                    "Add credits or switch LLM_PROVIDER=mock for local development."
-                ) from exc
-            raise RuntimeError(
-                f"DeepSeek API call failed: {exc}"
-            ) from exc
         except Exception as exc:
             raise RuntimeError(
-                f"DeepSeek API call failed: {exc}"
+                f"OpenAI API call failed: {exc}"
             ) from exc
 
         content = response.choices[0].message.content or "{}"
@@ -103,17 +89,8 @@ class DeepSeekProvider(LLMProvider):
                 ],
                 temperature=0.3,
             )
-        except APIStatusError as exc:
-            if exc.status_code == 402 or (
-                exc.message and "insufficient balance" in exc.message.lower()
-            ):
-                raise RuntimeError(
-                    "DeepSeek balance is insufficient. "
-                    "Add credits or switch LLM_PROVIDER=mock for local development."
-                ) from exc
-            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
         except Exception as exc:
-            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
+            raise RuntimeError(f"OpenAI API call failed: {exc}") from exc
 
         content = response.choices[0].message.content or "{}"
         content = content.strip()
@@ -154,17 +131,8 @@ class DeepSeekProvider(LLMProvider):
                 ],
                 temperature=0.2,
             )
-        except APIStatusError as exc:
-            if exc.status_code == 402 or (
-                exc.message and "insufficient balance" in exc.message.lower()
-            ):
-                raise RuntimeError(
-                    "DeepSeek balance is insufficient. "
-                    "Add credits or switch LLM_PROVIDER=mock for local development."
-                ) from exc
-            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
         except Exception as exc:
-            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
+            raise RuntimeError(f"OpenAI API call failed: {exc}") from exc
 
         content = response.choices[0].message.content or "{}"
         content = content.strip()
@@ -206,17 +174,8 @@ class DeepSeekProvider(LLMProvider):
                 ],
                 temperature=0.2,
             )
-        except APIStatusError as exc:
-            if exc.status_code == 402 or (
-                exc.message and "insufficient balance" in exc.message.lower()
-            ):
-                raise RuntimeError(
-                    "DeepSeek balance is insufficient. "
-                    "Add credits or switch LLM_PROVIDER=mock for local development."
-                ) from exc
-            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
         except Exception as exc:
-            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
+            raise RuntimeError(f"OpenAI API call failed: {exc}") from exc
 
         content = response.choices[0].message.content or "{}"
         content = content.strip()

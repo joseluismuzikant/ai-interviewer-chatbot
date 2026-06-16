@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from supabase import Client
 
-from app.providers.base import LLMProvider
+from app.domain.interfaces.llm_provider import LLMProvider
 
 
 class AnalysisService:

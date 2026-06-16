@@ -1,24 +1,26 @@
 import json
 
-import google.generativeai as genai
+from openai import APIStatusError, OpenAI
 from pydantic import ValidationError
 
-from app.config import Settings
-from app.providers.base import LLMProvider
+from app.core.config import Settings
+from app.domain.interfaces.llm_provider import LLMProvider
 from app.schemas import AnswerEvaluation, GeneratedReport, InterviewQuestion, MatchAnalysis
 
 
-class GeminiProvider(LLMProvider):
+class DeepSeekProvider(LLMProvider):
     def __init__(self, settings: Settings) -> None:
-        self.model = settings.google_model
-        self.api_key = settings.google_api_key
+        self.model = settings.deepseek_model
+        self.api_key = settings.deepseek_api_key
+        self._client: OpenAI | None = None
 
-        if not self.api_key:
-            raise ValueError(
-                "GOOGLE_API_KEY is not set. Configure it in .env to use the Gemini provider."
+    def _get_client(self) -> OpenAI:
+        if not self._client:
+            self._client = OpenAI(
+                api_key=self.api_key,
+                base_url="https://api.deepseek.com/v1",
             )
-
-        genai.configure(api_key=self.api_key)
+        return self._client
 
     def analyze_match(
         self, resume_text: str, role_description_text: str
@@ -37,14 +39,31 @@ class GeminiProvider(LLMProvider):
         )
 
         try:
-            model = genai.GenerativeModel(self.model, system_instruction=system_prompt)
-            response = model.generate_content(user_prompt)
+            response = self._get_client().chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.3,
+            )
+        except APIStatusError as exc:
+            if exc.status_code == 402 or (
+                exc.message and "insufficient balance" in exc.message.lower()
+            ):
+                raise RuntimeError(
+                    "DeepSeek balance is insufficient. "
+                    "Add credits or switch LLM_PROVIDER=mock for local development."
+                ) from exc
+            raise RuntimeError(
+                f"DeepSeek API call failed: {exc}"
+            ) from exc
         except Exception as exc:
             raise RuntimeError(
-                f"Gemini API call failed: {exc}"
+                f"DeepSeek API call failed: {exc}"
             ) from exc
 
-        content = response.text or "{}"
+        content = response.choices[0].message.content or "{}"
         content = content.strip()
         if content.startswith("```"):
             content = content.strip("`")
@@ -76,12 +95,27 @@ class GeminiProvider(LLMProvider):
         )
 
         try:
-            model = genai.GenerativeModel(self.model, system_instruction=system_prompt)
-            response = model.generate_content(user_prompt)
+            response = self._get_client().chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.3,
+            )
+        except APIStatusError as exc:
+            if exc.status_code == 402 or (
+                exc.message and "insufficient balance" in exc.message.lower()
+            ):
+                raise RuntimeError(
+                    "DeepSeek balance is insufficient. "
+                    "Add credits or switch LLM_PROVIDER=mock for local development."
+                ) from exc
+            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
         except Exception as exc:
-            raise RuntimeError(f"Gemini API call failed: {exc}") from exc
+            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
 
-        content = response.text or "{}"
+        content = response.choices[0].message.content or "{}"
         content = content.strip()
         if content.startswith("```"):
             content = content.strip("`")
@@ -112,12 +146,27 @@ class GeminiProvider(LLMProvider):
         )
 
         try:
-            model = genai.GenerativeModel(self.model, system_instruction=system_prompt)
-            response = model.generate_content(user_prompt)
+            response = self._get_client().chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.2,
+            )
+        except APIStatusError as exc:
+            if exc.status_code == 402 or (
+                exc.message and "insufficient balance" in exc.message.lower()
+            ):
+                raise RuntimeError(
+                    "DeepSeek balance is insufficient. "
+                    "Add credits or switch LLM_PROVIDER=mock for local development."
+                ) from exc
+            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
         except Exception as exc:
-            raise RuntimeError(f"Gemini API call failed: {exc}") from exc
+            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
 
-        content = response.text or "{}"
+        content = response.choices[0].message.content or "{}"
         content = content.strip()
         if content.startswith("```"):
             content = content.strip("`")
@@ -149,12 +198,27 @@ class GeminiProvider(LLMProvider):
         )
 
         try:
-            model = genai.GenerativeModel(self.model, system_instruction=system_prompt)
-            response = model.generate_content(user_prompt)
+            response = self._get_client().chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.2,
+            )
+        except APIStatusError as exc:
+            if exc.status_code == 402 or (
+                exc.message and "insufficient balance" in exc.message.lower()
+            ):
+                raise RuntimeError(
+                    "DeepSeek balance is insufficient. "
+                    "Add credits or switch LLM_PROVIDER=mock for local development."
+                ) from exc
+            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
         except Exception as exc:
-            raise RuntimeError(f"Gemini API call failed: {exc}") from exc
+            raise RuntimeError(f"DeepSeek API call failed: {exc}") from exc
 
-        content = response.text or "{}"
+        content = response.choices[0].message.content or "{}"
         content = content.strip()
         if content.startswith("```"):
             content = content.strip("`")

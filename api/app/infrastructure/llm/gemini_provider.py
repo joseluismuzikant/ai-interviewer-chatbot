@@ -1,23 +1,24 @@
 import json
 
-from openai import OpenAI
+import google.generativeai as genai
 from pydantic import ValidationError
 
-from app.config import Settings
-from app.providers.base import LLMProvider
+from app.core.config import Settings
+from app.domain.interfaces.llm_provider import LLMProvider
 from app.schemas import AnswerEvaluation, GeneratedReport, InterviewQuestion, MatchAnalysis
 
 
-class OpenAIProvider(LLMProvider):
+class GeminiProvider(LLMProvider):
     def __init__(self, settings: Settings) -> None:
-        self.model = settings.openai_model
-        self.api_key = settings.openai_api_key
-        self._client: OpenAI | None = None
+        self.model = settings.google_model
+        self.api_key = settings.google_api_key
 
-    def _get_client(self) -> OpenAI:
-        if not self._client:
-            self._client = OpenAI(api_key=self.api_key)
-        return self._client
+        if not self.api_key:
+            raise ValueError(
+                "GOOGLE_API_KEY is not set. Configure it in .env to use the Gemini provider."
+            )
+
+        genai.configure(api_key=self.api_key)
 
     def analyze_match(
         self, resume_text: str, role_description_text: str
@@ -36,20 +37,14 @@ class OpenAIProvider(LLMProvider):
         )
 
         try:
-            response = self._get_client().chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.3,
-            )
+            model = genai.GenerativeModel(self.model, system_instruction=system_prompt)
+            response = model.generate_content(user_prompt)
         except Exception as exc:
             raise RuntimeError(
-                f"OpenAI API call failed: {exc}"
+                f"Gemini API call failed: {exc}"
             ) from exc
 
-        content = response.choices[0].message.content or "{}"
+        content = response.text or "{}"
         content = content.strip()
         if content.startswith("```"):
             content = content.strip("`")
@@ -81,18 +76,12 @@ class OpenAIProvider(LLMProvider):
         )
 
         try:
-            response = self._get_client().chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.3,
-            )
+            model = genai.GenerativeModel(self.model, system_instruction=system_prompt)
+            response = model.generate_content(user_prompt)
         except Exception as exc:
-            raise RuntimeError(f"OpenAI API call failed: {exc}") from exc
+            raise RuntimeError(f"Gemini API call failed: {exc}") from exc
 
-        content = response.choices[0].message.content or "{}"
+        content = response.text or "{}"
         content = content.strip()
         if content.startswith("```"):
             content = content.strip("`")
@@ -123,18 +112,12 @@ class OpenAIProvider(LLMProvider):
         )
 
         try:
-            response = self._get_client().chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.2,
-            )
+            model = genai.GenerativeModel(self.model, system_instruction=system_prompt)
+            response = model.generate_content(user_prompt)
         except Exception as exc:
-            raise RuntimeError(f"OpenAI API call failed: {exc}") from exc
+            raise RuntimeError(f"Gemini API call failed: {exc}") from exc
 
-        content = response.choices[0].message.content or "{}"
+        content = response.text or "{}"
         content = content.strip()
         if content.startswith("```"):
             content = content.strip("`")
@@ -166,18 +149,12 @@ class OpenAIProvider(LLMProvider):
         )
 
         try:
-            response = self._get_client().chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.2,
-            )
+            model = genai.GenerativeModel(self.model, system_instruction=system_prompt)
+            response = model.generate_content(user_prompt)
         except Exception as exc:
-            raise RuntimeError(f"OpenAI API call failed: {exc}") from exc
+            raise RuntimeError(f"Gemini API call failed: {exc}") from exc
 
-        content = response.choices[0].message.content or "{}"
+        content = response.text or "{}"
         content = content.strip()
         if content.startswith("```"):
             content = content.strip("`")

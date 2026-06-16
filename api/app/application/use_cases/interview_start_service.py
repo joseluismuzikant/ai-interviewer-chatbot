@@ -3,9 +3,9 @@ from uuid import UUID
 from fastapi import HTTPException
 from supabase import Client
 
-from app.providers.base import LLMProvider
-from app.question_meta_store import get_question_meta, set_question_meta
-from app.schemas import InterviewStartResponse, StartedQuestion
+from app.application.use_cases.question_meta_store import get_question_meta, set_question_meta
+from app.domain.interfaces.llm_provider import LLMProvider
+from app.presentation.schemas.question import InterviewStartResponse, StartedQuestion
 
 
 class InterviewStartService:

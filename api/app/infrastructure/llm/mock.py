@@ -1,4 +1,4 @@
-from app.providers.base import LLMProvider
+from app.domain.interfaces.llm_provider import LLMProvider
 from app.schemas import (
     AnswerEvaluation,
     GeneratedReport,

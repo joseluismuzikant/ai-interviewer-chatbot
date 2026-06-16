@@ -4,8 +4,8 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 from supabase import Client
 
-from app.providers.base import LLMProvider
-from app.schemas import FinalReportResponse, GeneratedReport
+from app.domain.interfaces.llm_provider import LLMProvider
+from app.presentation.schemas.report import FinalReportResponse, GeneratedReport
 
 
 class ReportService:

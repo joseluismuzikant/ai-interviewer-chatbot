@@ -33,3 +33,17 @@ export async function uploadInterviewDocument(
 
   return response.json() as Promise<UploadDocumentResponse>;
 }
+
+export async function deleteInterviewDocument(
+  interviewId: string,
+  filename: string
+): Promise<void> {
+  const response = await fetch(
+    `${API_URL}/interviews/${interviewId}/documents/${encodeURIComponent(filename)}`,
+    { method: "DELETE" }
+  );
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "Delete document failed"));
+  }
+}

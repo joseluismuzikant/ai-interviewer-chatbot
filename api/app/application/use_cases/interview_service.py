@@ -44,7 +44,9 @@ class InterviewService:
 
     def delete_interview(self, interview_id: UUID) -> None:
         self.get_interview(interview_id)
-        self.supabase.table("interviews").delete().eq("id", str(interview_id)).execute()
+        interview_id_str = str(interview_id)
+        for table in ("messages", "documents", "interviews"):
+            self.supabase.table(table).delete().eq("interview_id" if table != "interviews" else "id", interview_id_str).execute()
 
     def list_messages(self, interview_id: UUID) -> list[dict]:
         response = (

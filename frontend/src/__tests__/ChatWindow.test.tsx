@@ -44,6 +44,75 @@ describe("ChatWindow", () => {
     expect(screen.getByText("Q1")).toBeInTheDocument();
   });
 
+  it("shows PASTED badge when paste_detected is true", () => {
+    render(
+      <ChatWindow
+        {...baseProps}
+        messages={[
+          {
+            id: "m1",
+            interview_id: "i1",
+            role: "candidate",
+            content: "My pasted answer",
+            question_number: 1,
+            difficulty_level: 5,
+            answer_quality_score: 7,
+            response_time_ms: 5000,
+            paste_detected: true,
+            created_at: null,
+          },
+        ]}
+      />
+    );
+    expect(screen.getByText("PASTED")).toBeInTheDocument();
+  });
+
+  it("does not show PASTED badge when paste_detected is false", () => {
+    render(
+      <ChatWindow
+        {...baseProps}
+        messages={[
+          {
+            id: "m2",
+            interview_id: "i1",
+            role: "candidate",
+            content: "Typed answer",
+            question_number: 1,
+            difficulty_level: 5,
+            answer_quality_score: 7,
+            response_time_ms: 45000,
+            paste_detected: false,
+            created_at: null,
+          },
+        ]}
+      />
+    );
+    expect(screen.queryByText("PASTED")).not.toBeInTheDocument();
+  });
+
+  it("does not show PASTED badge for assistant messages even when paste_detected is true", () => {
+    render(
+      <ChatWindow
+        {...baseProps}
+        messages={[
+          {
+            id: "m3",
+            interview_id: "i1",
+            role: "assistant",
+            content: "Question?",
+            question_number: 1,
+            difficulty_level: 5,
+            answer_quality_score: null,
+            response_time_ms: null,
+            paste_detected: true,
+            created_at: null,
+          },
+        ]}
+      />
+    );
+    expect(screen.queryByText("PASTED")).not.toBeInTheDocument();
+  });
+
   it("renders current question", () => {
     render(
       <ChatWindow

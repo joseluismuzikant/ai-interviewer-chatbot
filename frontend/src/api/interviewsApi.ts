@@ -29,3 +29,7 @@ export function startInterview(interviewId: string): Promise<StartInterviewRespo
 export function getInterviewMessages(interviewId: string): Promise<MessageResponse[]> {
   return apiFetch<MessageResponse[]>(`/interviews/${interviewId}/messages`);
 }
+
+export function deleteInterview(interviewId: string): Promise<void> {
+  return apiFetch<void>(`/interviews/${interviewId}`, { method: "DELETE" });
+}

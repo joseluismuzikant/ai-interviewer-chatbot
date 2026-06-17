@@ -25,5 +25,8 @@ export async function apiFetch<T>(
     const fallback = `Request to ${path} failed`;
     throw new Error(await getErrorMessage(response, fallback));
   }
+  if (response.status === 204) {
+    return undefined as T;
+  }
   return response.json() as Promise<T>;
 }

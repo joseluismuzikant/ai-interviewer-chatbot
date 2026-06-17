@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { API_URL } from "../api/client";
-import { createInterview, startInterview } from "../api/interviewsApi";
+import { createInterview, startInterview, deleteInterview } from "../api/interviewsApi";
+import { deleteInterviewDocument } from "../api/documentsApi";
 import { submitAnswer, generateReport } from "../api/reportsApi";
 import { FAKE_INTERVIEW_ID, MOCK_INTERVIEW, MOCK_START_RESPONSE } from "../test/mocks/server";
 
@@ -96,6 +97,35 @@ describe("API client", () => {
     expect(mock).toHaveBeenCalledWith(
       `${API_URL}/interviews/${FAKE_INTERVIEW_ID}/report`,
       { method: "POST" }
+    );
+  });
+
+  it("deleteInterview calls DELETE endpoint", async () => {
+    const mock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 204,
+      json: async () => undefined,
+    } as Response);
+
+    await deleteInterview(FAKE_INTERVIEW_ID);
+
+    expect(mock).toHaveBeenCalledWith(
+      `${API_URL}/interviews/${FAKE_INTERVIEW_ID}`,
+      { method: "DELETE" }
+    );
+  });
+
+  it("deleteInterviewDocument calls DELETE endpoint with encoded filename", async () => {
+    const mock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => undefined,
+    } as Response);
+
+    await deleteInterviewDocument(FAKE_INTERVIEW_ID, "resume.pdf");
+
+    expect(mock).toHaveBeenCalledWith(
+      `${API_URL}/interviews/${FAKE_INTERVIEW_ID}/documents/resume.pdf`,
+      { method: "DELETE" }
     );
   });
 });

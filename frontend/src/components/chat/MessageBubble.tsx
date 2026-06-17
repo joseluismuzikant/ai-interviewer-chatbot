@@ -20,6 +20,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           <span className="chat-role">{message.role.toUpperCase()}</span>
           {message.question_number ? <span>Q{message.question_number}</span> : null}
           {message.created_at ? <span>{formatDate(message.created_at)}</span> : null}
+          {message.role === "candidate" && message.paste_detected ? (
+            <span className="paste-badge">PASTED</span>
+          ) : null}
         </div>
         <p>{message.content}</p>
       </div>

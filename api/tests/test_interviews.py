@@ -2,6 +2,8 @@ from uuid import uuid4
 
 import pytest
 
+from .conftest import FAKE_SUPABASE
+
 
 def _create_interview(client, title="Test Interview", target_questions=8, starting_difficulty=5):
     return client.post(
@@ -89,3 +91,49 @@ class TestDeleteInterview:
     def test_404_for_nonexistent_delete(self, client):
         resp = client.delete(f"/interviews/{uuid4()}")
         assert resp.status_code == 404
+
+    def test_cascade_deletes_messages_and_documents(self, client):
+        create_resp = _create_interview(client)
+        interview_id = create_resp.json()["id"]
+
+        FAKE_SUPABASE._tables["messages"].append({
+            "id": str(uuid4()),
+            "interview_id": interview_id,
+            "role": "assistant",
+            "content": "test",
+            "question_number": 1,
+            "difficulty_level": 5.0,
+            "answer_quality_score": None,
+            "response_time_ms": None,
+            "paste_detected": False,
+        })
+        FAKE_SUPABASE._tables["documents"].append({
+            "id": str(uuid4()),
+            "interview_id": interview_id,
+            "document_type": "resume",
+            "filename": "test.pdf",
+            "storage_path": "test.pdf",
+            "mime_type": "application/pdf",
+            "extracted_text": "text",
+            "extracted_character_count": 4,
+        })
+
+        msg_resp = client.get(f"/interviews/{interview_id}/messages")
+        assert len(msg_resp.json()) == 1
+        doc_resp = client.get(f"/interviews/{interview_id}/documents")
+        assert len(doc_resp.json()["documents"]) == 1
+
+        delete_resp = client.delete(f"/interviews/{interview_id}")
+        assert delete_resp.status_code == 204
+
+        remaining_messages = [
+            m for m in FAKE_SUPABASE._tables["messages"]
+            if m.get("interview_id") == interview_id
+        ]
+        assert remaining_messages == []
+
+        remaining_docs = [
+            d for d in FAKE_SUPABASE._tables["documents"]
+            if d.get("interview_id") == interview_id
+        ]
+        assert remaining_docs == []

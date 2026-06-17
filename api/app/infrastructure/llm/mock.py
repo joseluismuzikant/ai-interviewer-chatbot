@@ -16,35 +16,37 @@ class MockProvider(LLMProvider):
     ) -> dict:
         analysis = {
             "role_summary": (
-                "The role requires a Senior Full-Stack Engineer proficient in "
-                "Python, TypeScript, React, FastAPI, and cloud infrastructure."
+                "[MOCK ANALYSIS] The role requires a Senior Full-Stack Engineer "
+                "proficient in Python, TypeScript, React, FastAPI, and cloud "
+                "infrastructure."
             ),
             "candidate_summary": (
-                "The candidate is an experienced engineer with a strong "
-                "background in Python, TypeScript, React, and FastAPI. Cloud "
-                "experience is present but limited compared to role expectations."
+                "[MOCK ANALYSIS] The candidate is an experienced engineer with "
+                "a strong background in Python, TypeScript, React, and FastAPI. "
+                "Cloud experience is present but limited compared to role "
+                "expectations."
             ),
             "focus_areas": [
                 {
-                    "topic": "Python and FastAPI",
+                    "topic": "[MOCK] Python and FastAPI",
                     "reason": (
-                        "Core requirement of the role and a demonstrated "
+                        "[MOCK] Core requirement of the role and a demonstrated "
                         "strength of the candidate."
                     ),
                 },
                 {
-                    "topic": "React and TypeScript",
+                    "topic": "[MOCK] React and TypeScript",
                     "reason": (
-                        "Frontend stack used by the team; the candidate has "
-                        "relevant hands-on experience."
+                        "[MOCK] Frontend stack used by the team; the candidate "
+                        "has relevant hands-on experience."
                     ),
                 },
             ],
             "potential_gaps": [
                 {
-                    "topic": "Cloud Infrastructure",
+                    "topic": "[MOCK] Cloud Infrastructure",
                     "reason": (
-                        "The role expects deep cloud expertise, but the "
+                        "[MOCK] The role expects deep cloud expertise, but the "
                         "candidate only has foundational exposure."
                     ),
                 },
@@ -56,19 +58,24 @@ class MockProvider(LLMProvider):
         question_number = int(context.get("question_number", 1))
         question = {
             "question": (
-                "Can you describe how you would design a scalable REST API "
-                "for a financial services application?"
+                "[MOCK QUESTION] Can you describe how you would design a "
+                "scalable REST API for a financial services application?"
                 if question_number == 1
-                else "How would you improve that API's reliability and observability under production load?"
+                else "[MOCK QUESTION] How would you improve that API's reliability "
+                     "and observability under production load?"
             ),
-            "topic": "Backend API design" if question_number == 1 else "Reliability and observability",
+            "topic": (
+                "[MOCK] Backend API design"
+                if question_number == 1
+                else "[MOCK] Reliability and observability"
+            ),
             "difficulty": 5,
             "expected_signals": [
-                "API resource design" if question_number == 1 else "SLO and metrics definition",
-                "validation and error handling",
-                "security considerations" if question_number == 1 else "failure-mode planning",
-                "database transaction boundaries" if question_number == 1 else "alerting strategy",
-                "observability",
+                "[MOCK] API resource design" if question_number == 1 else "[MOCK] SLO and metrics definition",
+                "[MOCK] validation and error handling",
+                "[MOCK] security considerations" if question_number == 1 else "[MOCK] failure-mode planning",
+                "[MOCK] database transaction boundaries" if question_number == 1 else "[MOCK] alerting strategy",
+                "[MOCK] observability",
             ],
         }
         return InterviewQuestion.model_validate(question).model_dump()
@@ -76,25 +83,40 @@ class MockProvider(LLMProvider):
     def evaluate_answer(self, context: dict) -> dict:
         evaluation = {
             "score": 7,
-            "rationale": "The answer demonstrates a solid understanding of the topic with enough technical detail for the MVP.",
-            "evidence": "The candidate describes API design, validation, and scalability considerations.",
-            "followup_hint": "Ask the candidate to go deeper into error handling, observability, and production trade-offs.",
+            "rationale": (
+                "[MOCK] The answer demonstrates a solid understanding of the "
+                "topic with enough technical detail for the MVP."
+            ),
+            "evidence": (
+                "[MOCK] The candidate describes API design, validation, and "
+                "scalability considerations."
+            ),
+            "followup_hint": (
+                "[MOCK] Ask the candidate to go deeper into error handling, "
+                "observability, and production trade-offs."
+            ),
         }
         return AnswerEvaluation.model_validate(evaluation).model_dump()
 
     def generate_report(self, context: dict) -> dict:
         report = {
-            "summary": "The candidate demonstrated solid full-stack engineering experience with good backend and cloud understanding.",
+            "summary": (
+                "[MOCK REPORT] The candidate demonstrated solid full-stack "
+                "engineering experience with good backend and cloud understanding."
+            ),
             "strengths": [
-                "Strong backend and API design knowledge",
-                "Good experience with cloud-native delivery",
-                "Clear practical examples from previous projects",
+                "[MOCK] Strong backend and API design knowledge",
+                "[MOCK] Good experience with cloud-native delivery",
+                "[MOCK] Clear practical examples from previous projects",
             ],
             "weaknesses": [
-                "Could provide more depth on security and authorization",
-                "Could explain database trade-offs in more detail",
+                "[MOCK] Could provide more depth on security and authorization",
+                "[MOCK] Could explain database trade-offs in more detail",
             ],
             "recommendation": "YES",
-            "recommendation_rationale": "The candidate shows enough technical strength and relevant experience for the role.",
+            "recommendation_rationale": (
+                "[MOCK] The candidate shows enough technical strength and "
+                "relevant experience for the role."
+            ),
         }
         return GeneratedReport.model_validate(report).model_dump()
